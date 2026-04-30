@@ -2,24 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { cn } from "@/lib/utils";
 import { pieceArea } from "@/lib/estimator";
+import { currencyDetailed as currency } from "@/lib/quote-helpers";
+import { QuoteStatusBadge } from "@/components/quote-status-badge";
 import { AIPanel, type AIAnalysisResult } from "./ai-panel";
-
-const currency = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-const STATUS_STYLES: Record<string, string> = {
-  draft: "bg-surface-3 text-text-secondary border border-border",
-  sent: "bg-info/10 text-info border border-info/30",
-  accepted: "bg-success/10 text-success border border-success/30",
-  declined: "bg-destructive/10 text-destructive border border-destructive/30",
-  expired: "bg-surface-3 text-text-muted border border-border",
-};
+import { QuoteActions } from "./quote-actions";
 
 export default async function QuoteDetailPage({
   params,
@@ -84,11 +71,11 @@ export default async function QuoteDetailPage({
     <div className="mx-auto max-w-5xl space-y-8 px-5 py-10 sm:px-8 sm:py-14">
       <div>
         <Link
-          href="/dashboard"
+          href="/quotes"
           className="inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-text"
         >
           <ArrowLeft className="size-3.5" />
-          Back to dashboard
+          Back to pipeline
         </Link>
       </div>
 
@@ -104,14 +91,7 @@ export default async function QuoteDetailPage({
             <p className="text-sm text-text-secondary">{quote.customer_email}</p>
           )}
         </div>
-        <span
-          className={cn(
-            "inline-flex w-fit items-center rounded-full px-3 py-1 font-mono text-xs uppercase tracking-[0.16em]",
-            STATUS_STYLES[quote.status] ?? STATUS_STYLES.draft,
-          )}
-        >
-          {quote.status}
-        </span>
+        <QuoteStatusBadge status={quote.status} />
       </header>
 
       <section className="rounded-lg border border-border bg-card p-6">
@@ -181,6 +161,22 @@ export default async function QuoteDetailPage({
       </section>
 
       <AIPanel quoteId={String(quote.id)} initial={initialAnalysis} />
+
+      <section
+        aria-label="Quote actions"
+        className="rounded-lg border border-border bg-card p-6"
+      >
+        <h2 className="font-heading text-sm font-semibold uppercase tracking-[0.16em] text-text-secondary">
+          Actions
+        </h2>
+        <p className="mt-1 text-xs text-text-muted">
+          Move this quote through your pipeline. Status changes are reflected in the
+          dashboard and pipeline KPIs immediately.
+        </p>
+        <div className="mt-4">
+          <QuoteActions quoteId={String(quote.id)} status={quote.status} />
+        </div>
+      </section>
     </div>
   );
 }
