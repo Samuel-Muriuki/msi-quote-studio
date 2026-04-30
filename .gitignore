@@ -47,6 +47,7 @@ yarn-error.log*
 
 # Type generation
 next-env.d.ts
+cloudflare-env.d.ts
 
 # Testing
 coverage/
