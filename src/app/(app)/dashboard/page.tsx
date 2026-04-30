@@ -65,8 +65,7 @@ export default async function DashboardPage() {
           icon={LineChart}
           title="Reporting"
           body="Pipeline value, win rate, AI confidence trend over time."
-          cta="Coming next"
-          disabled
+          cta="Open reports"
         />
       </div>
 
