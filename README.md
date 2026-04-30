@@ -19,7 +19,7 @@ The catalog (products, materials, industries, certification premiums) is seeded 
 - **Supabase Postgres** (direct SQL via `@supabase/supabase-js`, no ORM)
 - **Better Auth** (email/password)
 - **Groq** for AI inference (free tier, OpenAI-compatible API)
-- **Cloudflare Pages** deployment via `@opennextjs/cloudflare`
+- **Vercel** deployment (Cloudflare DNS)
 
 ## Getting started
 
@@ -73,10 +73,10 @@ Active 3-day demo build (started 2026-04-30). Roadmap:
 - [x] Foundation: scaffold, brand tokens, theme toggle, landing placeholder, deployment
 - [x] Schema + seed data (Marking Systems catalog: 16 products, 14 materials, 8 industries)
 - [x] Better Auth (email/password) + protected app routes + demo account
-- [ ] New Quote form with rule-based estimator
-- [ ] AI complexity scoring (Groq) + audit log
-- [ ] Quote Detail page with AI analysis panel
-- [ ] Quotes Dashboard + Reporting Dashboard
+- [x] New Quote form with rule-based estimator + dashboard recent-quotes table
+- [x] AI complexity scoring (Groq) + audit log + Quote Detail page with AI analysis panel
+- [ ] Quotes Pipeline (`/quotes`) — drafts/sent/accepted/declined table with filters
+- [ ] Reporting Dashboard (`/reports`) — pipeline value, win rate, AI confidence trend
 - [ ] Mobile responsiveness pass + Loom walkthrough
 
 ## Disclaimer

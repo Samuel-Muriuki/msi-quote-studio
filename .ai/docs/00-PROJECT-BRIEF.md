@@ -44,7 +44,7 @@ The demo must satisfy all three audiences.
 - AI complexity scoring via Groq (free tier)
 - Light + dark mode (mandatory per PROJECT-TEMPLATE.md)
 - Mobile-responsive (360 / 375 / 414 viewports)
-- Deployed to Cloudflare Pages (via `@opennextjs/cloudflare`) with Cloudflare DNS
+- Deployed to Vercel with Cloudflare DNS
 
 ### Out of scope (do NOT build these)
 
@@ -80,8 +80,8 @@ If the user asks for any of the above mid-build, push back and confirm before ad
 | Auth | Better Auth | Samuel's preferred stack; user.id is TEXT (critical) |
 | AI inference | Groq (free tier) | OpenAI-compatible API, fast, free for demo volume |
 | AI model | `llama-3.3-70b-versatile` (or current Groq free-tier flagship) | Reasoning quality fine for structured complexity scoring |
-| Hosting | Cloudflare Pages via `@opennextjs/cloudflare` | User-overridden from "Vercel" on 2026-04-30. OpenNext deploys the Next.js app to Cloudflare Workers with Static Assets binding; serves a `*.workers.dev` URL (or custom domain via Cloudflare DNS). Full RSC + server actions + route handlers supported. |
-| DNS / TLS | Cloudflare | Per Samuel's standard infra |
+| Hosting | Vercel | Native Next.js host. Cloudflare Workers + Pages were trialled and abandoned — `@cloudflare/next-on-pages` requires edge-runtime on every dynamic route (incompatible with Better Auth's `pg.Pool`), and `@opennextjs/cloudflare` couldn't bundle `pg-cloudflare/dist/index.js` cleanly. Back to the original spec value. |
+| DNS / TLS | Cloudflare | Per Samuel's standard infra (DNS only — points CNAME at Vercel) |
 | Logging | Console + DB audit trail (`ai_predictions` table) | No Sentry / Datadog for the demo |
 
 ### Required environment variables
@@ -95,13 +95,13 @@ DATABASE_URL=postgresql://...
 
 # Better Auth
 BETTER_AUTH_SECRET=<32+ char random string>
-BETTER_AUTH_URL=https://msi-quote-studio.<account>.workers.dev   # or custom Cloudflare domain
+BETTER_AUTH_URL=https://msi-quote-studio.vercel.app
 
 # Groq (free tier — sign up at console.groq.com)
 GROQ_API_KEY=gsk_...
 
 # App
-NEXT_PUBLIC_APP_URL=https://msi-quote-studio.<account>.workers.dev
+NEXT_PUBLIC_APP_URL=https://msi-quote-studio.vercel.app
 ```
 
 ---
@@ -528,7 +528,7 @@ See `.ai/design/brand-decision-2026-04.md` for the full brand spec. Summary:
 | 5 | Schema applied + seed data inserted | seeded DB |
 | 6 | Better Auth installed + configured (email/password) + sign-in/sign-up pages | PR |
 | 7 | Landing page polished | PR |
-| 8 | Day 1 review: deploy to Cloudflare Pages, confirm production URL works | live URL |
+| 8 | Day 1 review: deploy to Vercel, confirm production URL works | live URL |
 
 ### Day 2 — Core features (8 hours)
 
