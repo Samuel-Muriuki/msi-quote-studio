@@ -40,11 +40,11 @@ const PRIMARY_NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/quotes/new", label: "New quote", icon: FilePlus2, exact: true },
   { href: "/quotes", label: "Quotes", icon: ListChecks },
+  { href: "/customers", label: "Customers", icon: Users },
   { href: "/reports", label: "Reports", icon: LineChart },
 ];
 
 const SECONDARY_NAV: NavItem[] = [
-  { href: "/customers", label: "Customers", icon: Users, comingSoon: true },
   { href: "/settings", label: "Settings", icon: Settings, comingSoon: true },
 ];
 
