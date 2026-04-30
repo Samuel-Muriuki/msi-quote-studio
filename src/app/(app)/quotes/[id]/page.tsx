@@ -5,6 +5,12 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { pieceArea } from "@/lib/estimator";
 import { currencyDetailed as currency } from "@/lib/quote-helpers";
 import { QuoteStatusBadge } from "@/components/quote-status-badge";
+import { QuoteBenchmarkCard } from "@/components/quote-benchmark-card";
+import {
+  benchmarkForIndustry,
+  deriveQuoteBreakdown,
+  deltasVsBenchmark,
+} from "@/lib/cost-breakdown";
 import { AIPanel, type AIAnalysisResult } from "./ai-panel";
 import { QuoteActions } from "./quote-actions";
 
@@ -25,7 +31,7 @@ export default async function QuoteDetailPage({
       ai_complexity_score, ai_suggested_price_low, ai_suggested_price_high, ai_rationale,
       created_at, updated_at,
       products ( name, category, base_price_per_sq_in, setup_fee ),
-      materials ( name, type ),
+      materials ( name, type, cost_per_sq_in ),
       industries ( name, certification_premium, required_certifications )
     `,
     )
@@ -162,6 +168,16 @@ export default async function QuoteDetailPage({
 
       <AIPanel quoteId={String(quote.id)} initial={initialAnalysis} />
 
+      {industry && <BenchmarkBlock
+        industryName={industry.name}
+        product={product}
+        material={material}
+        widthInches={Number(quote.width_inches)}
+        heightInches={Number(quote.height_inches)}
+        quantity={Number(quote.quantity)}
+        certificationsCount={quote.certifications?.length ?? 0}
+      />}
+
       <section
         aria-label="Quote actions"
         className="rounded-lg border border-border bg-card p-6"
@@ -190,6 +206,45 @@ export default async function QuoteDetailPage({
         </div>
       </section>
     </div>
+  );
+}
+
+function BenchmarkBlock({
+  industryName,
+  product,
+  material,
+  widthInches,
+  heightInches,
+  quantity,
+  certificationsCount,
+}: {
+  industryName: string;
+  product: { base_price_per_sq_in: number; setup_fee: number } | null | undefined;
+  material: { cost_per_sq_in: number } | null | undefined;
+  widthInches: number;
+  heightInches: number;
+  quantity: number;
+  certificationsCount: number;
+}) {
+  const yours = deriveQuoteBreakdown({
+    industryName,
+    setupFee: Number(product?.setup_fee ?? 0),
+    basePricePerSqIn: Number(product?.base_price_per_sq_in ?? 0),
+    materialCostPerSqIn: Number(material?.cost_per_sq_in ?? 0.012),
+    widthInches,
+    heightInches,
+    quantity,
+    certificationsCount,
+  });
+  const benchmark = benchmarkForIndustry(industryName);
+  const deltas = deltasVsBenchmark(yours, benchmark);
+  return (
+    <QuoteBenchmarkCard
+      industryName={industryName}
+      yours={yours}
+      industry={benchmark}
+      deltas={deltas}
+    />
   );
 }
 
