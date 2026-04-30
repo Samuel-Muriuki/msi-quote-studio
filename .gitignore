@@ -23,7 +23,11 @@ dist/
 # Claude Code working folder — never commit
 .claude/
 
-# Cloudflare Pages build (vercel build artefacts)
+# Cloudflare Workers / OpenNext build output
+.open-next/
+.wrangler/
+
+# Vercel build (legacy — left in case anyone runs vercel locally)
 .vercel/
 
 # IDE / editor
@@ -43,6 +47,7 @@ yarn-error.log*
 
 # Type generation
 next-env.d.ts
+cloudflare-env.d.ts
 
 # Testing
 coverage/
