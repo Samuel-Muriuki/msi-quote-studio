@@ -6,15 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/searchable-select";
 import { calculateBaseEstimate } from "@/lib/estimator";
 import { createQuoteAction } from "./actions";
 
@@ -181,43 +173,39 @@ export function NewQuoteForm({ products, materials, industries }: Props) {
       <Section title="Product">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field id="product" label="Product" required>
-            <Select value={productId} onValueChange={(v) => setProductId(v ?? "")}>
-              <SelectTrigger id="product">
-                <SelectValue placeholder="Select a product" />
-              </SelectTrigger>
-              <SelectContent>
-                {[...groupedProducts.entries()].map(([category, items]) => (
-                  <SelectGroup key={category}>
-                    <SelectLabel>{CATEGORY_LABELS[category] ?? category}</SelectLabel>
-                    {items.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              ariaLabel="Product"
+              placeholder="Select a product"
+              searchPlaceholder="Search 16 products…"
+              value={productId || null}
+              onValueChange={setProductId}
+              options={[...groupedProducts.entries()].flatMap(([category, items]) =>
+                items.map((p) => ({
+                  value: p.id,
+                  label: p.name,
+                  group: CATEGORY_LABELS[category] ?? category,
+                  sublabel: `Setup ${"$"}${Number(p.setup_fee).toLocaleString()} · min ${p.min_qty} pcs`,
+                })),
+              )}
+            />
           </Field>
 
           <Field id="material" label="Material" required>
-            <Select value={materialId} onValueChange={(v) => setMaterialId(v ?? "")}>
-              <SelectTrigger id="material">
-                <SelectValue placeholder="Select a material" />
-              </SelectTrigger>
-              <SelectContent>
-                {[...groupedMaterials.entries()].map(([type, items]) => (
-                  <SelectGroup key={type}>
-                    <SelectLabel>{MATERIAL_TYPE_LABELS[type] ?? type}</SelectLabel>
-                    {items.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              ariaLabel="Material"
+              placeholder="Select a material"
+              searchPlaceholder="Search 14 materials…"
+              value={materialId || null}
+              onValueChange={setMaterialId}
+              options={[...groupedMaterials.entries()].flatMap(([type, items]) =>
+                items.map((m) => ({
+                  value: m.id,
+                  label: m.name,
+                  group: MATERIAL_TYPE_LABELS[type] ?? type,
+                  sublabel: `Durability ${m.durability_score}/10`,
+                })),
+              )}
+            />
           </Field>
         </div>
       </Section>
@@ -273,18 +261,18 @@ export function NewQuoteForm({ products, materials, industries }: Props) {
 
       <Section title="Industry & certifications">
         <Field id="industry" label="Industry" required>
-          <Select value={industryId} onValueChange={(v) => setIndustryId(v ?? "")}>
-            <SelectTrigger id="industry">
-              <SelectValue placeholder="Select an industry" />
-            </SelectTrigger>
-            <SelectContent>
-              {industries.map((i) => (
-                <SelectItem key={i.id} value={i.id}>
-                  {i.name} (×{Number(i.certification_premium).toFixed(2)})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            ariaLabel="Industry"
+            placeholder="Select an industry"
+            searchPlaceholder="Search 8 industries…"
+            value={industryId || null}
+            onValueChange={setIndustryId}
+            options={industries.map((i) => ({
+              value: i.id,
+              label: i.name,
+              sublabel: `Certification premium ×${Number(i.certification_premium).toFixed(2)}`,
+            }))}
+          />
         </Field>
         {certifications.length > 0 && (
           <div className="space-y-2">
