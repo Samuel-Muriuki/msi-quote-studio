@@ -314,9 +314,9 @@ This is the differentiator. Use the actual product names from markingsystems.com
 - Hero with the project name, one-sentence description, two CTAs (Try Demo / View Source Code)
 - Three-up feature grid: "AI-Enhanced Estimating" / "Real-Time Reporting" / "Catalog-Driven Workflows"
 - Architecture diagram (simple SVG) showing user → Next.js → Postgres → Groq
-- Footer with: "Portfolio case study by Samuel Muriuki — not affiliated with Marking Systems Inc." + contact links + GitHub link
+- Footer with: "Portfolio case study by Samuel Muriuki — inspired by Marking Systems Inc." + contact links + GitHub link
 
-**Disclaimer:** Footer must explicitly state "not affiliated with Marking Systems Inc." This is a legal/IP must.
+**Disclaimer:** Footer states "inspired by Marking Systems Inc." — friendlier framing for the recruiter audience while still making clear this is a portfolio piece, not an MSI product. The README also includes a longer "not built for, endorsed by, or a commercial offering" disclaimer for explicit IP separation.
 
 ### 7.2 Sign In — `/sign-in`
 
@@ -564,7 +564,7 @@ See `.ai/design/brand-decision-2026-04.md` for the full brand spec. Summary:
 - [ ] Reporting dashboard renders all 3 charts with real data
 - [ ] Light + dark mode both render cleanly
 - [ ] Mobile (360px), tablet (768px), desktop (1440px) all render without horizontal scroll
-- [ ] Footer disclaimer "Not affiliated with Marking Systems Inc." present on landing
+- [ ] Footer disclaimer "Inspired by Marking Systems Inc." present on landing
 - [ ] GitHub repo public, README professional with screenshots
 - [ ] No AI/Claude attribution anywhere on GitHub
 - [ ] Loom walkthrough recorded (≤3 minutes)
