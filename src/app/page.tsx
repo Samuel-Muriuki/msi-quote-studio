@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ArrowRight, Cpu, Factory, LineChart } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { cn } from "@/lib/utils";
 
 const FEATURES = [
   {
@@ -52,21 +53,27 @@ export default function HomePage() {
             quote.
           </p>
           <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Button
-              asChild
-              size="lg"
-              className="bg-accent text-accent-foreground hover:bg-accent/90"
+            <Link
+              href="/sign-in"
+              className={cn(
+                buttonVariants({ size: "lg" }),
+                "h-12 gap-2 px-6 text-base bg-accent text-accent-foreground hover:bg-accent/90",
+              )}
             >
-              <Link href="/sign-in">
-                Try the demo
-                <ArrowRight className="ml-2 size-4" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="lg">
-              <a href={REPO_URL} target="_blank" rel="noreferrer noopener">
-                View source on GitHub
-              </a>
-            </Button>
+              Try the demo
+              <ArrowRight className="size-4" aria-hidden />
+            </Link>
+            <a
+              href={REPO_URL}
+              target="_blank"
+              rel="noreferrer noopener"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "lg" }),
+                "h-12 px-6 text-base",
+              )}
+            >
+              View source on GitHub
+            </a>
           </div>
         </section>
 
