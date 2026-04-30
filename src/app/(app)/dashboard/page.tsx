@@ -58,8 +58,7 @@ export default async function DashboardPage() {
           icon={LayoutDashboard}
           title="Quotes Pipeline"
           body="Drafts, sent, accepted and declined — all your quotes in one place."
-          cta="Coming next"
-          disabled
+          cta="Open pipeline"
         />
         <ActionCard
           href="/reports"
