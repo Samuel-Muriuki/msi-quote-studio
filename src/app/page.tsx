@@ -566,8 +566,8 @@ function SiteFooter() {
         <div className="space-y-1">
           <p>
             Portfolio case study by{" "}
-            <span className="font-medium text-text-secondary">Samuel Muriuki</span> &mdash; not
-            affiliated with Marking Systems Inc.
+            <span className="font-medium text-text-secondary">Samuel Muriuki</span> &mdash;
+            inspired by Marking Systems Inc.
           </p>
           <p>&copy; 2026 &mdash; All rights reserved.</p>
         </div>
