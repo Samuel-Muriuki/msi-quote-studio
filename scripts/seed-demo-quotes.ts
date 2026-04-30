@@ -329,6 +329,7 @@ async function main() {
       ai_suggested_price_high,
       ai_rationale,
       estimator_id: estimatorId,
+      is_demo_sample: true,
       created_at: created.toISOString(),
       updated_at: created.toISOString(),
     };
