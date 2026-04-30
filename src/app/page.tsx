@@ -1,65 +1,122 @@
-import Image from "next/image";
+import Link from "next/link";
+import { ArrowRight, Cpu, Factory, LineChart } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
-export default function Home() {
+const FEATURES = [
+  {
+    icon: Cpu,
+    title: "AI-Enhanced Estimating",
+    body: "Real Groq inference on every quote — complexity score, suggested price range, and a plain-English rationale logged for audit.",
+  },
+  {
+    icon: LineChart,
+    title: "Real-Time Reporting",
+    body: "Pipeline value, win rate, conversion, and AI confidence — surfaced as soon as the quote lands, not the next morning.",
+  },
+  {
+    icon: Factory,
+    title: "Catalog-Driven Workflows",
+    body: "Real product catalog, materials, industries and certification premiums baked in. Estimators pick from what actually ships.",
+  },
+];
+
+const REPO_URL = "https://github.com/Samuel-Muriuki/msi-quote-studio";
+
+export default function HomePage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="flex min-h-screen flex-col">
+      <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
+          <Wordmark />
+          <ThemeToggle />
+        </div>
+      </header>
+
+      <main className="flex-1">
+        <section className="mx-auto max-w-6xl px-5 pb-20 pt-16 sm:px-8 sm:pt-24">
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-text-secondary">
+            Portfolio case study · Custom manufacturing
+          </p>
+          <h1 className="mt-6 font-heading text-4xl font-semibold leading-[1.05] tracking-tight text-text sm:text-5xl md:text-6xl">
+            AI-enhanced quote estimating
+            <br className="hidden sm:block" />
+            <span className="text-accent">
+              {" "}
+              for the labels and converters that ship the world.
+            </span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+          <p className="mt-6 max-w-2xl text-base text-text-secondary sm:text-lg">
+            Estimators describe a job; the system returns a complexity score, a calibrated price
+            range, and the reasoning behind it &mdash; logged for every prediction, on every
+            quote.
+          </p>
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Button
+              asChild
+              size="lg"
+              className="bg-accent text-accent-foreground hover:bg-accent/90"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
+              <Link href="/sign-in">
+                Try the demo
+                <ArrowRight className="ml-2 size-4" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="lg">
+              <a href={REPO_URL} target="_blank" rel="noreferrer noopener">
+                View source on GitHub
+              </a>
+            </Button>
+          </div>
+        </section>
+
+        <section
+          aria-label="Capabilities"
+          className="border-t border-border bg-surface-3/40"
+        >
+          <div className="mx-auto grid max-w-6xl gap-px bg-border sm:grid-cols-3">
+            {FEATURES.map(({ icon: Icon, title, body }) => (
+              <article key={title} className="bg-background p-8">
+                <div className="flex size-10 items-center justify-center rounded-md bg-accent/10 text-accent">
+                  <Icon className="size-5" aria-hidden />
+                </div>
+                <h2 className="mt-5 font-heading text-lg font-semibold text-text">{title}</h2>
+                <p className="mt-2 text-sm leading-relaxed text-text-secondary">{body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-border">
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-5 py-8 text-xs text-text-muted sm:flex-row sm:items-center sm:justify-between sm:px-8">
+          <p>
+            Portfolio case study by{" "}
+            <span className="font-medium text-text-secondary">Samuel Muriuki</span> &mdash; not
+            affiliated with Marking Systems Inc.
+          </p>
+          <p className="font-mono">
             <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              href={REPO_URL}
+              className="hover:text-text"
+              target="_blank"
+              rel="noreferrer noopener"
             >
-              Learning
-            </a>{" "}
-            center.
+              github.com/Samuel-Muriuki/msi-quote-studio
+            </a>
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </footer>
     </div>
+  );
+}
+
+function Wordmark() {
+  return (
+    <span className="font-heading text-lg font-semibold tracking-tight">
+      <span className="text-text">MSI</span>{" "}
+      <span className="text-accent">Quote</span>{" "}
+      <span className="text-text">Studio</span>
+    </span>
   );
 }
