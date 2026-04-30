@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { pieceArea } from "@/lib/estimator";
 import { currencyDetailed as currency } from "@/lib/quote-helpers";
@@ -166,13 +166,25 @@ export default async function QuoteDetailPage({
         aria-label="Quote actions"
         className="rounded-lg border border-border bg-card p-6"
       >
-        <h2 className="font-heading text-sm font-semibold uppercase tracking-[0.16em] text-text-secondary">
-          Actions
-        </h2>
-        <p className="mt-1 text-xs text-text-muted">
-          Move this quote through your pipeline. Status changes are reflected in the
-          dashboard and pipeline KPIs immediately.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-heading text-sm font-semibold uppercase tracking-[0.16em] text-text-secondary">
+              Actions
+            </h2>
+            <p className="mt-1 text-xs text-text-muted">
+              Move this quote through your pipeline. Status changes are reflected in the
+              dashboard and pipeline KPIs immediately.
+            </p>
+          </div>
+          <a
+            href={`/api/quotes/${quote.id}/pdf`}
+            download
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-text-secondary transition-colors hover:border-border-strong hover:text-text"
+          >
+            <Download className="size-3" aria-hidden />
+            Download PDF
+          </a>
+        </div>
         <div className="mt-4">
           <QuoteActions quoteId={String(quote.id)} status={quote.status} />
         </div>
