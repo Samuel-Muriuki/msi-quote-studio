@@ -2,7 +2,7 @@
 
 > AI-enhanced quote estimator for custom manufacturing — complexity scoring, calibrated price recommendations, and rule-based estimating in one workflow.
 
-**Portfolio case study by Samuel Muriuki — not affiliated with Marking Systems Inc.**
+**Portfolio case study by Samuel Muriuki — inspired by Marking Systems Inc.**
 
 🌐 **Live demo:** https://msi-quote-studio.vercel.app
 
@@ -110,7 +110,7 @@ scripts/
 
 ## Disclaimer
 
-This is an independent portfolio project. It is not built for, endorsed by, or affiliated with Marking Systems Inc. The branding ("Industrial Slate") is deliberately distinct from the company's actual brand. Product category names are referenced descriptively for catalog seeding only.
+This is an independent portfolio project, inspired by Marking Systems Inc.'s public product catalog. It is not built for or endorsed by Marking Systems Inc., and is not a commercial offering. The branding ("Industrial Slate") is deliberately distinct from the company's actual brand. Product category names are referenced descriptively for catalog seeding only.
 
 ## Author
 
