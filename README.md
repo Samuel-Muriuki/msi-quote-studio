@@ -51,13 +51,28 @@ src/
 └── lib/          ← shared utilities (supabase clients, groq, estimator)
 ```
 
+## Demo credentials
+
+A pre-seeded estimator account is available so reviewers can sign in without registering. The sign-in page also shows these with copy-to-clipboard:
+
+```
+email:    demo@msi-quote-studio.com
+password: demo-account-2026
+```
+
+To re-seed (idempotent):
+
+```bash
+pnpm exec tsx --env-file=.env.local scripts/seed-demo-user.ts
+```
+
 ## Status
 
 Active 3-day demo build (started 2026-04-30). Roadmap:
 
 - [x] Foundation: scaffold, brand tokens, theme toggle, landing placeholder, deployment
-- [ ] Schema + seed data (Marking Systems catalog)
-- [ ] Better Auth (email/password) + protected app routes
+- [x] Schema + seed data (Marking Systems catalog: 16 products, 14 materials, 8 industries)
+- [x] Better Auth (email/password) + protected app routes + demo account
 - [ ] New Quote form with rule-based estimator
 - [ ] AI complexity scoring (Groq) + audit log
 - [ ] Quote Detail page with AI analysis panel
