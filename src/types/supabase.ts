@@ -127,6 +127,50 @@ export type Database = {
           },
         ]
       }
+      customers: {
+        Row: {
+          company: string | null
+          created_at: string
+          email: string | null
+          estimator_id: string
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          estimator_id: string
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          estimator_id?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_estimator_id_fkey"
+            columns: ["estimator_id"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       industries: {
         Row: {
           certification_premium: number
@@ -233,6 +277,7 @@ export type Database = {
           certifications: string[]
           created_at: string
           customer_email: string | null
+          customer_id: string | null
           customer_name: string
           estimator_id: string
           final_price: number | null
@@ -257,6 +302,7 @@ export type Database = {
           certifications?: string[]
           created_at?: string
           customer_email?: string | null
+          customer_id?: string | null
           customer_name: string
           estimator_id: string
           final_price?: number | null
@@ -281,6 +327,7 @@ export type Database = {
           certifications?: string[]
           created_at?: string
           customer_email?: string | null
+          customer_id?: string | null
           customer_name?: string
           estimator_id?: string
           final_price?: number | null
@@ -297,6 +344,13 @@ export type Database = {
           width_inches?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "quotes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "quotes_estimator_id_fkey"
             columns: ["estimator_id"]
