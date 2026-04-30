@@ -23,10 +23,45 @@ const jetBrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+const SITE_URL =
+  process.env.NEXT_PUBLIC_APP_URL ?? "https://msi-quote-studio.vercel.app";
+const DESCRIPTION =
+  "AI-enhanced quote estimator for custom manufacturing — complexity scoring, price recommendations, and rule-based estimating in one workflow.";
+
 export const metadata: Metadata = {
-  title: "MSI Quote Studio",
-  description:
-    "AI-enhanced quote estimator for custom manufacturing — complexity scoring, price recommendations, and rule-based estimating in one workflow.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "MSI Quote Studio",
+    template: "%s · MSI Quote Studio",
+  },
+  description: DESCRIPTION,
+  keywords: [
+    "quote estimator",
+    "custom manufacturing",
+    "AI complexity scoring",
+    "Marking Systems",
+    "label estimating",
+    "Next.js",
+    "portfolio case study",
+  ],
+  authors: [{ name: "Samuel Muriuki" }],
+  creator: "Samuel Muriuki",
+  openGraph: {
+    type: "website",
+    siteName: "MSI Quote Studio",
+    title: "MSI Quote Studio — AI-enhanced quote estimating",
+    description: DESCRIPTION,
+    url: SITE_URL,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MSI Quote Studio — AI-enhanced quote estimating",
+    description: DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
