@@ -1,7 +1,17 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider, THEME_STORAGE_KEY } from "@/components/theme-provider";
 import "./globals.css";
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F8FAFC" },
+    { media: "(prefers-color-scheme: dark)", color: "#020617" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 const noFlashThemeScript = `(function(){try{var t=localStorage.getItem('${THEME_STORAGE_KEY}');var dark=t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(dark)document.documentElement.classList.add('dark');}catch(e){}})();`;
 
