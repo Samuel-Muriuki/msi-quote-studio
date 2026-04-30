@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Sparkles, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { pieceArea } from "@/lib/estimator";
+import { AIPanel, type AIAnalysisResult } from "./ai-panel";
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -53,6 +53,32 @@ export default async function QuoteDetailPage({
   const material = Array.isArray(quote.materials) ? quote.materials[0] : quote.materials;
   const industry = Array.isArray(quote.industries) ? quote.industries[0] : quote.industries;
   const area = pieceArea(Number(quote.width_inches), Number(quote.height_inches));
+
+  // Pull the latest AI prediction for model + latency metadata if the quote has been analyzed.
+  let initialAnalysis: AIAnalysisResult | null = null;
+  if (
+    quote.ai_complexity_score != null &&
+    quote.ai_suggested_price_low != null &&
+    quote.ai_suggested_price_high != null &&
+    quote.ai_rationale
+  ) {
+    const { data: latest } = await supabase
+      .from("ai_predictions")
+      .select("model_used, latency_ms")
+      .eq("quote_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    initialAnalysis = {
+      complexity_score: Number(quote.ai_complexity_score),
+      suggested_price_low: Number(quote.ai_suggested_price_low),
+      suggested_price_high: Number(quote.ai_suggested_price_high),
+      rationale: quote.ai_rationale,
+      model_used: latest?.model_used ?? "saved",
+      latency_ms: latest?.latency_ms ?? 0,
+    };
+  }
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 px-5 py-10 sm:px-8 sm:py-14">
@@ -154,7 +180,7 @@ export default async function QuoteDetailPage({
         </div>
       </section>
 
-      <AIPanel quoteId={quote.id} />
+      <AIPanel quoteId={String(quote.id)} initial={initialAnalysis} />
     </div>
   );
 }
@@ -175,55 +201,6 @@ function DetailRow({
       </p>
       <div className="text-base text-text">{value}</div>
       {sub && <p className="text-xs text-text-secondary">{sub}</p>}
-    </div>
-  );
-}
-
-function AIPanel({ quoteId }: { quoteId: string }) {
-  return (
-    <section className="rounded-lg border border-accent/30 bg-accent/5 p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Sparkles className="size-4 text-accent" />
-            <h2 className="font-heading text-sm font-semibold uppercase tracking-[0.16em] text-accent">
-              AI Complexity & Pricing
-            </h2>
-          </div>
-          <p className="mt-2 max-w-xl text-sm text-text-secondary">
-            Real Groq inference returns a complexity score (1–10), a calibrated price range, and the
-            reasoning behind it. Every prediction is logged to the audit trail.
-          </p>
-        </div>
-        <span
-          className={cn(
-            buttonVariants({ size: "sm" }),
-            "pointer-events-none cursor-not-allowed bg-accent/40 text-accent-foreground",
-          )}
-          aria-disabled
-          title="Coming next"
-        >
-          Run AI Analysis
-        </span>
-      </div>
-      <div className="mt-6 grid gap-4 rounded-md border border-dashed border-border p-6 sm:grid-cols-3">
-        <SkeletonRow label="Complexity" />
-        <SkeletonRow label="Suggested low" />
-        <SkeletonRow label="Suggested high" />
-      </div>
-      <p className="mt-4 font-mono text-xs text-text-muted">
-        Quote id <span className="text-text">{String(quoteId)}</span> · ready for analysis once the
-        Groq route lands in the next iteration.
-      </p>
-    </section>
-  );
-}
-
-function SkeletonRow({ label }: { label: string }) {
-  return (
-    <div>
-      <p className="font-mono text-xs uppercase tracking-[0.12em] text-text-muted">{label}</p>
-      <div className="mt-2 h-7 w-3/4 rounded bg-surface-3" />
     </div>
   );
 }
