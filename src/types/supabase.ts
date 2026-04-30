@@ -239,6 +239,7 @@ export type Database = {
           height_inches: number
           id: string
           industry_id: string
+          is_demo_sample: boolean
           material_id: string
           notes: string | null
           product_id: string
@@ -262,6 +263,7 @@ export type Database = {
           height_inches: number
           id?: string
           industry_id: string
+          is_demo_sample?: boolean
           material_id: string
           notes?: string | null
           product_id: string
@@ -285,6 +287,7 @@ export type Database = {
           height_inches?: number
           id?: string
           industry_id?: string
+          is_demo_sample?: boolean
           material_id?: string
           notes?: string | null
           product_id?: string
