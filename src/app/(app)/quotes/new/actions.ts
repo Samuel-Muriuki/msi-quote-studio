@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { calculateBaseEstimate } from "@/lib/estimator";
+import { moderateQuoteInputs } from "@/lib/moderation";
 
 export type CreateQuoteInput = {
   customerName: string;
@@ -45,6 +46,15 @@ export async function createQuoteAction(
   }
   if (!Number.isInteger(input.quantity) || input.quantity <= 0) {
     return { ok: false, error: "Quantity must be a positive whole number." };
+  }
+
+  const moderation = moderateQuoteInputs({
+    customerName: input.customerName,
+    customerEmail: input.customerEmail,
+    notes: input.notes,
+  });
+  if (!moderation.ok) {
+    return { ok: false, error: moderation.reason };
   }
 
   const supabase = createServerSupabaseClient();
