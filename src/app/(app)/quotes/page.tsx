@@ -15,6 +15,7 @@ import {
   type DateRange,
   type QuoteStatus,
 } from "@/lib/quote-helpers";
+import { KpiValueAnimated, type KpiFormat } from "@/components/kpi-value-animated";
 import { QuotesFilterBar } from "./quotes-filter-bar";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -92,21 +93,19 @@ export default async function QuotesPipelinePage({
         aria-label="Pipeline KPIs"
         className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
       >
-        <KpiCard label="Quotes (30d)" value={String(kpis.totalQuotes30d)} />
+        <KpiCard label="Quotes (30d)" value={kpis.totalQuotes30d} format="count" />
         <KpiCard
           label="Avg quote value"
-          value={kpis.avgQuoteValue > 0 ? currency.format(kpis.avgQuoteValue) : "—"}
+          value={kpis.avgQuoteValue > 0 ? kpis.avgQuoteValue : null}
+          format="currency"
         />
         <KpiCard
           label="Win rate"
-          value={
-            kpis.winRate === null
-              ? "—"
-              : `${Math.round(kpis.winRate * 100)}%`
-          }
+          value={kpis.winRate === null ? null : kpis.winRate * 100}
+          format="percent"
           accent={kpis.winRate !== null && kpis.winRate >= 0.5}
         />
-        <KpiCard label="Pending" value={String(kpis.pendingQuotes)} />
+        <KpiCard label="Pending" value={kpis.pendingQuotes} format="count" />
       </section>
 
       <div className="mt-8">
@@ -191,10 +190,12 @@ export default async function QuotesPipelinePage({
 function KpiCard({
   label,
   value,
+  format,
   accent,
 }: {
   label: string;
-  value: string;
+  value: number | null;
+  format: KpiFormat;
   accent?: boolean;
 }) {
   return (
@@ -207,14 +208,14 @@ function KpiCard({
       <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-text-muted">
         {label}
       </p>
-      <p
+      <KpiValueAnimated
+        value={value}
+        format={format}
         className={cn(
-          "mt-2 font-heading text-2xl font-semibold tracking-tight",
+          "mt-2 block font-heading text-2xl font-semibold tracking-tight",
           accent ? "text-accent" : "text-text",
         )}
-      >
-        {value}
-      </p>
+      />
     </article>
   );
 }
