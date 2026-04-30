@@ -20,6 +20,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { LandingFaq } from "@/components/landing/landing-faq";
 import { BenchmarkTeaser } from "@/components/landing/benchmark-teaser";
+import { FreeCalculator } from "@/components/landing/free-calculator";
 
 const REPO_URL = "https://github.com/Samuel-Muriuki/msi-quote-studio";
 
@@ -32,6 +33,7 @@ export default function HomePage() {
         <HeroSection />
         <LogoStrip />
         <HowItWorks />
+        <CalculatorSection />
         <BenchmarkSection />
         <TestimonialSection />
         <FaqSection />
@@ -54,6 +56,7 @@ function SiteHeader() {
         <Wordmark />
         <nav className="hidden items-center gap-6 text-sm font-medium text-text-secondary md:flex">
           <a href="#how-it-works" className="hover:text-text">How it works</a>
+          <a href="#calculator" className="hover:text-text">Calculator</a>
           <a href="#benchmark" className="hover:text-text">Benchmark</a>
           <a href="#faq" className="hover:text-text">FAQ</a>
           <a href={REPO_URL} target="_blank" rel="noreferrer noopener" className="hover:text-text">
@@ -349,6 +352,30 @@ function HowItWorks() {
 // Benchmark section
 // =============================================================
 
+function CalculatorSection() {
+  return (
+    <section id="calculator" className="border-b border-border">
+      <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-24">
+        <div className="max-w-2xl">
+          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent">
+            Try it now &mdash; free
+          </p>
+          <h2 className="mt-3 font-heading text-3xl font-semibold tracking-tight text-text sm:text-4xl">
+            Manufacturing cost calculator.
+          </h2>
+          <p className="mt-4 text-base text-text-secondary">
+            Drag the sliders to see your unit cost, monthly total, profit per unit, and gross
+            margin update live. No sign-up &mdash; bookmark the page if you want to come back to it.
+          </p>
+        </div>
+        <div className="mt-10">
+          <FreeCalculator />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function BenchmarkSection() {
   return (
     <section id="benchmark" className="border-b border-border bg-surface-3/40">
@@ -546,6 +573,7 @@ function SiteFooter() {
         </div>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-mono">
           <a href="#how-it-works" className="hover:text-text">How it works</a>
+          <a href="#calculator" className="hover:text-text">Calculator</a>
           <a href="#benchmark" className="hover:text-text">Benchmark</a>
           <a href="#faq" className="hover:text-text">FAQ</a>
           <a href={REPO_URL} target="_blank" rel="noreferrer noopener" className="hover:text-text">
