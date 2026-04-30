@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Next.js build output
+.next/
+out/
+build/
+dist/
+
+# Environment
+.env
+.env*.local
+.env.production
+.dev.vars
+
+# Claude Code working folder — never commit
+.claude/
+
+# Vercel build output
+.vercel/
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Type generation
+next-env.d.ts
+
+# Testing
+coverage/
+playwright-report/
+test-results/
