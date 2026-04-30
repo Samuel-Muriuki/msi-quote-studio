@@ -34,16 +34,13 @@ export function SignInForm() {
     }
   }
 
-  function fillDemo() {
-    setEmail(DEMO_EMAIL);
-    setPassword(DEMO_PASSWORD);
-  }
-
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
+  async function signInWith(emailValue: string, passwordValue: string) {
     setError(null);
     setLoading(true);
-    const result = await authClient.signIn.email({ email, password });
+    const result = await authClient.signIn.email({
+      email: emailValue,
+      password: passwordValue,
+    });
     setLoading(false);
     if (result.error) {
       setError(result.error.message ?? "Sign-in failed");
@@ -51,6 +48,17 @@ export function SignInForm() {
     }
     router.push(redirectTo);
     router.refresh();
+  }
+
+  function signInAsDemo() {
+    setEmail(DEMO_EMAIL);
+    setPassword(DEMO_PASSWORD);
+    void signInWith(DEMO_EMAIL, DEMO_PASSWORD);
+  }
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    await signInWith(email, password);
   }
 
   return (
@@ -97,10 +105,11 @@ export function SignInForm() {
         </div>
         <button
           type="button"
-          onClick={fillDemo}
-          className="mt-3 text-xs font-medium text-accent hover:underline"
+          onClick={signInAsDemo}
+          disabled={loading}
+          className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline disabled:opacity-60"
         >
-          Or fill them in for me →
+          {loading ? "Signing in…" : "Sign in as demo →"}
         </button>
       </div>
 
