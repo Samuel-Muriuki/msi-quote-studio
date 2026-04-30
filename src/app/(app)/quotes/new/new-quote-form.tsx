@@ -181,7 +181,7 @@ export function NewQuoteForm({ products, materials, industries }: Props) {
       <Section title="Product">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field id="product" label="Product" required>
-            <Select value={productId} onValueChange={setProductId}>
+            <Select value={productId} onValueChange={(v) => setProductId(v ?? "")}>
               <SelectTrigger id="product">
                 <SelectValue placeholder="Select a product" />
               </SelectTrigger>
@@ -201,7 +201,7 @@ export function NewQuoteForm({ products, materials, industries }: Props) {
           </Field>
 
           <Field id="material" label="Material" required>
-            <Select value={materialId} onValueChange={setMaterialId}>
+            <Select value={materialId} onValueChange={(v) => setMaterialId(v ?? "")}>
               <SelectTrigger id="material">
                 <SelectValue placeholder="Select a material" />
               </SelectTrigger>
@@ -273,7 +273,7 @@ export function NewQuoteForm({ products, materials, industries }: Props) {
 
       <Section title="Industry & certifications">
         <Field id="industry" label="Industry" required>
-          <Select value={industryId} onValueChange={setIndustryId}>
+          <Select value={industryId} onValueChange={(v) => setIndustryId(v ?? "")}>
             <SelectTrigger id="industry">
               <SelectValue placeholder="Select an industry" />
             </SelectTrigger>
