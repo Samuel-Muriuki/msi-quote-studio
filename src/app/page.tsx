@@ -329,9 +329,12 @@ function HowItWorks() {
           </p>
         </div>
 
-        <ol className="mt-12 grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
+        <ol className="mt-12 grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4 lg:gap-6">
           {steps.map(({ n, Icon, title, body }) => (
-            <li key={n} className="flex flex-col gap-4 bg-card p-6">
+            <li
+              key={n}
+              className="flex flex-col gap-4 rounded-xl border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-md"
+            >
               <div className="flex items-center justify-between">
                 <span className="font-mono text-xs uppercase tracking-[0.18em] text-accent">
                   {n}
