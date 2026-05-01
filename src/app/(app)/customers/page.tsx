@@ -76,47 +76,47 @@ export default async function CustomersPage() {
         ) : (
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {customers.map((c) => (
-              <li
-                key={c.id}
-                className="rounded-lg border border-border bg-surface-1 p-5 shadow-sm"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 space-y-1">
-                    <h2 className="truncate font-heading text-base font-semibold text-text">
-                      {c.name}
-                    </h2>
-                    {c.company && (
-                      <p className="flex items-center gap-1.5 truncate text-xs text-text-secondary">
-                        <Building2 className="size-3.5 shrink-0" />
-                        <span className="truncate">{c.company}</span>
-                      </p>
-                    )}
+              <li key={c.id}>
+                <Link
+                  href={`/customers/${c.id}`}
+                  className="block rounded-lg border border-border bg-surface-1 p-5 shadow-sm transition-shadow hover:border-border-strong hover:shadow-md"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 space-y-1">
+                      <h2 className="truncate font-heading text-base font-semibold text-text">
+                        {c.name}
+                      </h2>
+                      {c.company && (
+                        <p className="flex items-center gap-1.5 truncate text-xs text-text-secondary">
+                          <Building2 className="size-3.5 shrink-0" />
+                          <span className="truncate">{c.company}</span>
+                        </p>
+                      )}
+                    </div>
+                    <span className="rounded bg-surface-3 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-text-muted">
+                      {quoteCounts[c.id] ?? 0} quotes
+                    </span>
                   </div>
-                  <span className="rounded bg-surface-3 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-text-muted">
-                    {quoteCounts[c.id] ?? 0} quotes
-                  </span>
-                </div>
 
-                <dl className="mt-4 space-y-1.5 text-xs text-text-secondary">
-                  {c.email && (
-                    <div className="flex items-center gap-1.5">
-                      <Mail className="size-3.5 shrink-0 text-text-muted" />
-                      <a href={`mailto:${c.email}`} className="truncate hover:text-text">
-                        {c.email}
-                      </a>
-                    </div>
-                  )}
-                  {c.phone && (
-                    <div className="flex items-center gap-1.5">
-                      <Phone className="size-3.5 shrink-0 text-text-muted" />
-                      <span className="truncate">{c.phone}</span>
-                    </div>
-                  )}
-                </dl>
+                  <dl className="mt-4 space-y-1.5 text-xs text-text-secondary">
+                    {c.email && (
+                      <div className="flex items-center gap-1.5">
+                        <Mail className="size-3.5 shrink-0 text-text-muted" />
+                        <span className="truncate">{c.email}</span>
+                      </div>
+                    )}
+                    {c.phone && (
+                      <div className="flex items-center gap-1.5">
+                        <Phone className="size-3.5 shrink-0 text-text-muted" />
+                        <span className="truncate">{c.phone}</span>
+                      </div>
+                    )}
+                  </dl>
 
-                <p className="mt-4 text-[10px] text-text-muted">
-                  Added {dateFormatter.format(new Date(c.created_at))}
-                </p>
+                  <p className="mt-4 text-[10px] text-text-muted">
+                    Added {dateFormatter.format(new Date(c.created_at))}
+                  </p>
+                </Link>
               </li>
             ))}
           </ul>
