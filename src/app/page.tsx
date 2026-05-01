@@ -574,8 +574,23 @@ function SiteFooter() {
         <div className="space-y-1">
           <p>
             Portfolio case study by{" "}
-            <span className="font-medium text-text-secondary">Samuel Muriuki</span> &mdash;
-            inspired by Marking Systems Inc.
+            <a
+              href="https://samuel-muriuki.vercel.app/"
+              target="_blank"
+              rel="noreferrer noopener"
+              className="font-medium text-text-secondary underline-offset-2 hover:text-text hover:underline"
+            >
+              Samuel Muriuki
+            </a>{" "}
+            &mdash; inspired by{" "}
+            <a
+              href="https://markingsystems.com/"
+              target="_blank"
+              rel="noreferrer noopener"
+              className="font-medium text-text-secondary underline-offset-2 hover:text-text hover:underline"
+            >
+              Marking Systems Inc.
+            </a>
           </p>
           <p>&copy; 2026 &mdash; All rights reserved.</p>
         </div>
