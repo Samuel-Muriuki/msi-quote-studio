@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { generateCustomerSeed } from "@/lib/demo-fill";
 import { createCustomerAction } from "./actions";
 
 export function NewCustomerForm() {
@@ -35,8 +36,30 @@ export function NewCustomerForm() {
     });
   }
 
+  function autofill() {
+    const seed = generateCustomerSeed();
+    setName(seed.name);
+    setEmail(seed.email);
+    setCompany(seed.company);
+    setPhone(seed.phone);
+    setNotes(seed.notes);
+    setError(null);
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={autofill}
+          className="gap-1.5"
+        >
+          <Sparkles className="size-3.5" />
+          Autofill demo data
+        </Button>
+      </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="name">Customer name</Label>
