@@ -36,10 +36,15 @@ const STATIC_LABELS: Record<string, string> = {
 
 const LOOKS_LIKE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function prettyLabelFor(segment: string): string {
+function prettyLabelFor(segment: string, parent: string | undefined): string {
   if (STATIC_LABELS[segment]) return STATIC_LABELS[segment];
   if (LOOKS_LIKE_UUID.test(segment)) {
-    return `Q-${segment.slice(0, 8).toUpperCase()}`;
+    // Context-aware UUID formatting: only Q- for /quotes/[id]; other UUIDs
+    // (like /customers/[id]) get a neutral 8-char slug.
+    const slug = segment.slice(0, 8).toUpperCase();
+    if (parent === "quotes") return `Q-${slug}`;
+    if (parent === "customers") return slug;
+    return slug;
   }
   // Default: title-case the segment with hyphens replaced by spaces
   return segment
@@ -61,7 +66,8 @@ export function AppBreadcrumb({ leafLabel }: { leafLabel?: string }) {
   const crumbs = segments.map((seg, i) => {
     const href = "/" + segments.slice(0, i + 1).join("/");
     const isLast = i === segments.length - 1;
-    const label = isLast && leafLabel ? leafLabel : prettyLabelFor(seg);
+    const parent = i > 0 ? segments[i - 1] : undefined;
+    const label = isLast && leafLabel ? leafLabel : prettyLabelFor(seg, parent);
     return { href, label, isLast };
   });
 
