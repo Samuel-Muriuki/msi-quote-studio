@@ -7,6 +7,7 @@ import {
   Building2,
   FilePlus2,
   Mail,
+  Pencil,
   Phone,
   StickyNote,
 } from "lucide-react";
@@ -97,16 +98,25 @@ export default async function CustomerDetailPage({
           )}
         </div>
         <div className="flex flex-col items-end gap-2">
-          <Link
-            href="/quotes/new"
-            className={cn(
-              buttonVariants({ size: "sm" }),
-              "bg-accent text-accent-foreground hover:bg-accent/90 gap-1.5",
-            )}
-          >
-            <FilePlus2 className="size-4" />
-            Quote this customer
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/customers/${customer.id}/edit`}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}
+            >
+              <Pencil className="size-3.5" />
+              Edit
+            </Link>
+            <Link
+              href="/quotes/new"
+              className={cn(
+                buttonVariants({ size: "sm" }),
+                "bg-accent text-accent-foreground hover:bg-accent/90 gap-1.5",
+              )}
+            >
+              <FilePlus2 className="size-4" />
+              Quote this customer
+            </Link>
+          </div>
           <DemoExpiryBadge
             createdAt={customer.created_at}
             isSample={customer.is_demo_sample}
