@@ -4,9 +4,17 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { parseSvg } from "@/lib/svg-parse";
+import { parseDxf } from "@/lib/dxf-parse";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
-const ALLOWED_MIME = new Set(["image/svg+xml", "text/xml", "application/xml"]);
+const SVG_MIME = new Set(["image/svg+xml", "text/xml", "application/xml"]);
+const DXF_MIME = new Set([
+  "image/vnd.dxf",
+  "application/dxf",
+  "application/x-dxf",
+  "application/acad",
+  "drawing/x-dxf",
+]);
 
 export type CadUploadResult =
   | {
@@ -48,29 +56,34 @@ export async function uploadCadFileAction(formData: FormData): Promise<CadUpload
     };
   }
 
-  const filename = file.name || "drawing.svg";
-  const isSvgByExt = /\.svg$/i.test(filename);
-  const isSvgByMime = ALLOWED_MIME.has(file.type) || file.type === "";
-  if (!isSvgByExt && !isSvgByMime) {
+  const filename = file.name || "drawing";
+  const isSvg = /\.svg$/i.test(filename) || SVG_MIME.has(file.type);
+  const isDxf = /\.dxf$/i.test(filename) || DXF_MIME.has(file.type);
+
+  if (!isSvg && !isDxf) {
     return {
       ok: false,
-      error: "Only SVG files are supported right now (DXF / PDF coming next).",
+      error: "Only SVG and DXF files are supported (PDF coming later).",
     };
   }
 
   const text = await file.text();
-  const parseResult = parseSvg(text);
+  const parseResult = isSvg ? parseSvg(text) : parseDxf(text);
   if (!parseResult.ok) {
-    return { ok: false, error: `SVG parse failed: ${parseResult.error}` };
+    return {
+      ok: false,
+      error: `${isSvg ? "SVG" : "DXF"} parse failed: ${parseResult.error}`,
+    };
   }
 
+  const storedMime = isSvg ? "image/svg+xml" : "application/dxf";
   const supabase = createServerSupabaseClient();
   const storagePath = `${session.user.id}/${crypto.randomUUID()}-${sanitizeFilename(filename)}`;
 
   const { error: uploadError } = await supabase.storage
     .from("cad-uploads")
     .upload(storagePath, text, {
-      contentType: "image/svg+xml",
+      contentType: storedMime,
       upsert: false,
     });
 
@@ -84,7 +97,7 @@ export async function uploadCadFileAction(formData: FormData): Promise<CadUpload
       estimator_id: session.user.id,
       storage_path: storagePath,
       original_filename: filename,
-      mime_type: "image/svg+xml",
+      mime_type: storedMime,
       file_size_bytes: file.size,
       width_inches: parseResult.widthInches,
       height_inches: parseResult.heightInches,

@@ -532,7 +532,7 @@ export function NewQuoteForm({ products, materials, industries, customers }: Pro
                       fileInputs.current[line.uid] = el;
                     }}
                     type="file"
-                    accept=".svg,image/svg+xml"
+                    accept=".svg,.dxf,image/svg+xml,image/vnd.dxf,application/dxf"
                     className="hidden"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
@@ -714,7 +714,7 @@ function CadUploadInline({
         className="gap-1.5"
       >
         <FileUp className="size-3.5" />
-        Upload CAD (SVG)
+        Upload CAD (SVG or DXF)
       </Button>
     );
   }
