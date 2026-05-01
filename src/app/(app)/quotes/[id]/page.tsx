@@ -43,7 +43,8 @@ export default async function QuoteDetailPage({
       .select(
         `id, position, width_inches, height_inches, quantity, line_estimate,
          products ( name, category, base_price_per_sq_in, setup_fee ),
-         materials ( name, type, cost_per_sq_in )`,
+         materials ( name, type, cost_per_sq_in ),
+         cad_uploads ( id, original_filename, mime_type, path_count, storage_path )`,
       )
       .eq("quote_id", id)
       .order("position", { ascending: true }),
@@ -99,6 +100,32 @@ export default async function QuoteDetailPage({
 
   const totalQty = lines.reduce((sum, l) => sum + Number(l.quantity), 0);
 
+  // Generate one-hour signed URLs for any line that has a CAD upload, so the
+  // preview can render the SVG inline (or offer a download for DXF). We do
+  // this in parallel and key by line.id for easy lookup in the render.
+  type CadLink = {
+    filename: string;
+    mimeType: string;
+    pathCount: number | null;
+    signedUrl: string | null;
+  };
+  const cadByLineId = new Map<string, CadLink>();
+  await Promise.all(
+    lines.map(async (line) => {
+      const cad = Array.isArray(line.cad_uploads) ? line.cad_uploads[0] : line.cad_uploads;
+      if (!cad) return;
+      const { data: signed } = await supabase.storage
+        .from("cad-uploads")
+        .createSignedUrl(cad.storage_path, 3600);
+      cadByLineId.set(line.id, {
+        filename: cad.original_filename,
+        mimeType: cad.mime_type,
+        pathCount: cad.path_count,
+        signedUrl: signed?.signedUrl ?? null,
+      });
+    }),
+  );
+
   return (
     <div className="mx-auto max-w-5xl space-y-8 px-5 py-10 sm:px-8 sm:py-14">
       <div>
@@ -147,25 +174,29 @@ export default async function QuoteDetailPage({
             const widthIn = Number(line.width_inches);
             const heightIn = Number(line.height_inches);
             const area = pieceArea(widthIn, heightIn);
+            const cad = cadByLineId.get(line.id);
             return (
-              <li key={line.id} className="grid gap-3 py-4 sm:grid-cols-[1fr_auto] sm:items-start">
-                <div className="space-y-1">
-                  <p className="font-heading text-base font-semibold text-text">
-                    {product?.name ?? "Product"}
-                  </p>
-                  <p className="text-xs text-text-secondary">
-                    {[
-                      material?.name,
-                      `${widthIn} × ${heightIn} in (${area} sq in / piece)`,
-                      `${Number(line.quantity).toLocaleString()} pcs`,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
+              <li key={line.id} className="space-y-3 py-4">
+                <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
+                  <div className="space-y-1">
+                    <p className="font-heading text-base font-semibold text-text">
+                      {product?.name ?? "Product"}
+                    </p>
+                    <p className="text-xs text-text-secondary">
+                      {[
+                        material?.name,
+                        `${widthIn} × ${heightIn} in (${area} sq in / piece)`,
+                        `${Number(line.quantity).toLocaleString()} pcs`,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  </div>
+                  <p className="font-mono text-sm font-semibold tabular-nums text-text sm:text-right">
+                    {currency.format(Number(line.line_estimate))}
                   </p>
                 </div>
-                <p className="font-mono text-sm font-semibold tabular-nums text-text sm:text-right">
-                  {currency.format(Number(line.line_estimate))}
-                </p>
+                {cad && <CadPreview cad={cad} />}
               </li>
             );
           })}
@@ -333,6 +364,61 @@ function DetailRow({
       </p>
       <div className="text-base text-text">{value}</div>
       {sub && <p className="text-xs text-text-secondary">{sub}</p>}
+    </div>
+  );
+}
+
+function CadPreview({
+  cad,
+}: {
+  cad: {
+    filename: string;
+    mimeType: string;
+    pathCount: number | null;
+    signedUrl: string | null;
+  };
+}) {
+  const isSvg = cad.mimeType === "image/svg+xml";
+  return (
+    <div className="flex flex-col gap-3 rounded-md border border-border bg-surface-1 p-3 sm:flex-row sm:items-center">
+      {isSvg && cad.signedUrl ? (
+        <div className="flex h-20 w-32 shrink-0 items-center justify-center rounded border border-border bg-white p-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={cad.signedUrl}
+            alt={`Drawing for ${cad.filename}`}
+            className="max-h-full max-w-full object-contain"
+          />
+        </div>
+      ) : (
+        <div className="flex h-20 w-32 shrink-0 items-center justify-center rounded border border-border bg-surface-3 font-mono text-[10px] uppercase tracking-[0.16em] text-text-muted">
+          {isSvg ? "preview off" : "DXF"}
+        </div>
+      )}
+      <div className="min-w-0 flex-1 space-y-1">
+        <p className="flex items-center gap-1.5 truncate text-xs">
+          <span className="font-mono text-text-muted">CAD:</span>
+          <span className="truncate font-mono text-text">{cad.filename}</span>
+        </p>
+        {cad.pathCount != null && (
+          <p className="text-[11px] text-text-secondary">
+            {cad.pathCount} drawing element{cad.pathCount === 1 ? "" : "s"} extracted —
+            fed into the AI complexity prompt as a density signal.
+          </p>
+        )}
+        {cad.signedUrl && (
+          <p className="text-[10px] text-text-muted">
+            <a
+              href={cad.signedUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="underline-offset-2 hover:text-text hover:underline"
+            >
+              Open original ↗
+            </a>
+          </p>
+        )}
+      </div>
     </div>
   );
 }
