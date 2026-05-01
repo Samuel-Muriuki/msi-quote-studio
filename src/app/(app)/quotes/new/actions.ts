@@ -8,6 +8,7 @@ import { calculateBaseEstimate } from "@/lib/estimator";
 import { moderateQuoteInputs } from "@/lib/moderation";
 
 export type CreateQuoteInput = {
+  customerId: string | null;
   customerName: string;
   customerEmail: string | null;
   productId: string;
@@ -95,9 +96,26 @@ export async function createQuoteAction(
     certificationPremium: Number(industry.certification_premium),
   });
 
+  let customerId: string | null = null;
+  if (input.customerId) {
+    const { data: customer, error: customerError } = await supabase
+      .from("customers")
+      .select("id, estimator_id")
+      .eq("id", input.customerId)
+      .maybeSingle();
+    if (customerError) {
+      return { ok: false, error: customerError.message };
+    }
+    if (!customer || customer.estimator_id !== session.user.id) {
+      return { ok: false, error: "Selected customer not found." };
+    }
+    customerId = customer.id;
+  }
+
   const { data: inserted, error: insertError } = await supabase
     .from("quotes")
     .insert({
+      customer_id: customerId,
       customer_name: input.customerName.trim(),
       customer_email: input.customerEmail?.trim() || null,
       product_id: input.productId,

@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, useTransition, type FormEvent } from "react";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,10 +34,18 @@ type IndustryRow = {
   required_certifications: string[];
 };
 
+type CustomerRow = {
+  id: string;
+  name: string;
+  email: string | null;
+  company: string | null;
+};
+
 type Props = {
   products: ProductRow[];
   materials: MaterialRow[];
   industries: IndustryRow[];
+  customers: CustomerRow[];
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -62,7 +71,8 @@ const currency = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
-export function NewQuoteForm({ products, materials, industries }: Props) {
+export function NewQuoteForm({ products, materials, industries, customers }: Props) {
+  const [customerId, setCustomerId] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [productId, setProductId] = useState("");
@@ -74,6 +84,24 @@ export function NewQuoteForm({ products, materials, industries }: Props) {
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const selectedCustomer = customerId
+    ? customers.find((c) => c.id === customerId) ?? null
+    : null;
+
+  function pickCustomer(id: string) {
+    const customer = customers.find((c) => c.id === id);
+    if (!customer) return;
+    setCustomerId(id);
+    setCustomerName(customer.name);
+    setCustomerEmail(customer.email ?? "");
+  }
+
+  function clearCustomerSelection() {
+    setCustomerId(null);
+    setCustomerName("");
+    setCustomerEmail("");
+  }
 
   const groupedProducts = useMemo(() => {
     const groups = new Map<string, ProductRow[]>();
@@ -126,6 +154,7 @@ export function NewQuoteForm({ products, materials, industries }: Props) {
 
     startTransition(async () => {
       const result = await createQuoteAction({
+        customerId,
         customerName,
         customerEmail: customerEmail || null,
         productId,
@@ -148,6 +177,37 @@ export function NewQuoteForm({ products, materials, industries }: Props) {
   return (
     <form onSubmit={onSubmit} className="space-y-10">
       <Section title="Customer">
+        {customers.length > 0 && (
+          <Field id="customer-picker" label="Pick a saved customer (optional)">
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <SearchableSelect
+                  ariaLabel="Saved customer"
+                  placeholder="Search saved customers…"
+                  searchPlaceholder={`Search ${customers.length} customer${customers.length === 1 ? "" : "s"}…`}
+                  value={customerId}
+                  onValueChange={pickCustomer}
+                  options={customers.map((c) => ({
+                    value: c.id,
+                    label: c.name,
+                    sublabel: [c.company, c.email].filter(Boolean).join(" · ") || undefined,
+                  }))}
+                />
+              </div>
+              {selectedCustomer && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={clearCustomerSelection}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+          </Field>
+        )}
+
         <div className="grid gap-4 sm:grid-cols-2">
           <Field id="customer-name" label="Customer name" required>
             <Input
@@ -156,6 +216,8 @@ export function NewQuoteForm({ products, materials, industries }: Props) {
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
               placeholder="Acme Manufacturing"
+              readOnly={selectedCustomer !== null}
+              aria-readonly={selectedCustomer !== null}
             />
           </Field>
           <Field id="customer-email" label="Email (optional)">
@@ -165,9 +227,22 @@ export function NewQuoteForm({ products, materials, industries }: Props) {
               value={customerEmail}
               onChange={(e) => setCustomerEmail(e.target.value)}
               placeholder="buyer@acme.com"
+              readOnly={selectedCustomer !== null}
+              aria-readonly={selectedCustomer !== null}
             />
           </Field>
         </div>
+
+        {customers.length === 0 && (
+          <p className="flex items-center gap-1.5 text-xs text-text-muted">
+            <UserPlus className="size-3.5" />
+            Tip:{" "}
+            <Link href="/customers/new" className="underline hover:text-text">
+              save a customer
+            </Link>{" "}
+            once and you can pick them on every future quote.
+          </p>
+        )}
       </Section>
 
       <Section title="Product">
