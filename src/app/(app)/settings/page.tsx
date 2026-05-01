@@ -115,9 +115,11 @@ export default async function SettingsPage() {
           <StatCard label="Sample quotes (kept forever)" value={String(sampleQuotes ?? 0)} />
         </div>
         <p className="mt-3 text-xs text-text-muted">
-          The daily cleanup cron deletes user-created quotes older than 7 days. Sample
-          quotes are tagged <span className="font-mono">is_demo_sample=true</span> and
-          stay forever so the demo stays predictable.
+          The daily cleanup cron deletes user-created quotes older than{" "}
+          <span className="font-mono">48 hours</span>. Sample quotes are tagged{" "}
+          <span className="font-mono">is_demo_sample=true</span> and stay forever so the
+          demo stays predictable. Same 48-hour window applies if the database grows beyond
+          ~100 MB.
         </p>
       </section>
 
