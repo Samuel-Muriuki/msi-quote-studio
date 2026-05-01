@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { BrandMark } from "@/components/brand-mark";
 import { cn } from "@/lib/utils";
 import { LandingFaq } from "@/components/landing/landing-faq";
 import { BenchmarkTeaser } from "@/components/landing/benchmark-teaser";
@@ -83,7 +84,11 @@ function SiteHeader() {
 
 function Wordmark() {
   return (
-    <Link href="/" className="font-heading text-lg font-semibold tracking-tight">
+    <Link
+      href="/"
+      className="flex items-center gap-2 font-heading text-lg font-semibold tracking-tight"
+    >
+      <BrandMark className="size-7" />
       <span className="text-text">MSI</span>{" "}
       <span className="text-accent">Quote</span>{" "}
       <span className="text-text">Studio</span>
