@@ -26,10 +26,16 @@ type Props = {
   initial: AIAnalysisResult | null;
 };
 
+type AIErrorState = {
+  message: string;
+  code: string;
+  retryable: boolean;
+};
+
 export function AIPanel({ quoteId, initial }: Props) {
   const [analysis, setAnalysis] = useState<AIAnalysisResult | null>(initial);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AIErrorState | null>(null);
 
   async function run() {
     setLoading(true);
@@ -43,13 +49,27 @@ export function AIPanel({ quoteId, initial }: Props) {
         const body = (await res.json().catch(() => ({}))) as {
           error?: string;
           detail?: string;
+          code?: string;
+          retryable?: boolean;
         };
-        throw new Error(body.detail || body.error || `Request failed (${res.status})`);
+        setError({
+          message: body.error || body.detail || `Request failed (${res.status})`,
+          code: body.code || "unknown",
+          retryable: body.retryable !== false,
+        });
+        return;
       }
       const data = (await res.json()) as AIAnalysisResult;
       setAnalysis(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError({
+        message:
+          err instanceof Error
+            ? `Network error contacting the analyze endpoint: ${err.message}`
+            : "Network error contacting the analyze endpoint.",
+        code: "network",
+        retryable: true,
+      });
     } finally {
       setLoading(false);
     }
@@ -93,23 +113,61 @@ export function AIPanel({ quoteId, initial }: Props) {
       {loading && <SkeletonGroup />}
 
       {!loading && error && (
-        <div className="mt-6 rounded-md border border-destructive/40 bg-destructive/10 p-4">
-          <div className="flex items-start gap-2 text-sm text-destructive">
+        <div
+          className={cn(
+            "mt-6 rounded-md border p-4",
+            error.code === "rate_limit"
+              ? "border-warning/40 bg-warning/10"
+              : "border-destructive/40 bg-destructive/10",
+          )}
+        >
+          <div
+            className={cn(
+              "flex items-start gap-2 text-sm",
+              error.code === "rate_limit" ? "text-warning" : "text-destructive",
+            )}
+          >
             <AlertCircle className="mt-0.5 size-4 shrink-0" />
             <div>
-              <p className="font-medium">Analysis failed</p>
-              <p className="mt-1 text-destructive/80">{error}</p>
+              <p className="font-medium">
+                {error.code === "rate_limit"
+                  ? "Rate limit hit"
+                  : error.code === "auth"
+                    ? "Groq authentication failed"
+                    : error.code === "missing_api_key"
+                      ? "Groq not configured"
+                      : error.code === "service_unavailable"
+                        ? "Groq is unavailable"
+                        : error.code === "timeout"
+                          ? "Groq timed out"
+                          : error.code === "network"
+                            ? "Network problem"
+                            : error.code === "invalid_response"
+                              ? "Unexpected response from Groq"
+                              : "Analysis failed"}
+              </p>
+              <p
+                className={cn(
+                  "mt-1",
+                  error.code === "rate_limit" ? "text-warning/80" : "text-destructive/80",
+                )}
+              >
+                {error.message}
+              </p>
             </div>
           </div>
-          <Button
-            type="button"
-            onClick={run}
-            size="sm"
-            variant="outline"
-            className="mt-3"
-          >
-            Try again
-          </Button>
+          {error.retryable && (
+            <Button
+              type="button"
+              onClick={run}
+              size="sm"
+              variant="outline"
+              className="mt-3"
+            >
+              <RefreshCw className="size-3.5" />
+              Try again
+            </Button>
+          )}
         </div>
       )}
 

@@ -1,10 +1,13 @@
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { NewQuoteForm } from "./new-quote-form";
 
 export default async function NewQuotePage() {
+  const session = await auth.api.getSession({ headers: await headers() });
   const supabase = createServerSupabaseClient();
 
-  const [products, materials, industries] = await Promise.all([
+  const [products, materials, industries, customers] = await Promise.all([
     supabase
       .from("products")
       .select("id, category, name, base_price_per_sq_in, setup_fee, min_qty")
@@ -21,11 +24,18 @@ export default async function NewQuotePage() {
       .from("industries")
       .select("id, name, certification_premium, required_certifications")
       .order("name", { ascending: true }),
+    session
+      ? supabase
+          .from("customers")
+          .select("id, name, email, company")
+          .eq("estimator_id", session.user.id)
+          .order("name", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
-  if (products.error || materials.error || industries.error) {
+  if (products.error || materials.error || industries.error || customers.error) {
     throw new Error(
-      `Catalog load failed: ${products.error?.message ?? materials.error?.message ?? industries.error?.message}`,
+      `Catalog load failed: ${products.error?.message ?? materials.error?.message ?? industries.error?.message ?? customers.error?.message}`,
     );
   }
 
@@ -50,6 +60,7 @@ export default async function NewQuotePage() {
           products={products.data ?? []}
           materials={materials.data ?? []}
           industries={industries.data ?? []}
+          customers={customers.data ?? []}
         />
       </div>
     </div>

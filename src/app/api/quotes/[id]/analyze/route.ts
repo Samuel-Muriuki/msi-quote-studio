@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { analyzeQuote } from "@/lib/groq";
+import { AIError, analyzeQuote, type LineAnalyzeInput } from "@/lib/groq";
 
 export async function POST(
   _req: Request,
@@ -10,72 +10,116 @@ export async function POST(
 ) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id } = await params;
   const supabase = createServerSupabaseClient();
 
-  const { data: quote, error: quoteError } = await supabase
-    .from("quotes")
-    .select(
-      `
-      id, width_inches, height_inches, quantity, certifications, base_estimate,
-      products!inner ( name, category ),
-      materials!inner ( name, durability_score ),
-      industries!inner ( name )
-    `,
-    )
-    .eq("id", id)
-    .single();
+  const [quoteRes, linesRes] = await Promise.all([
+    supabase
+      .from("quotes")
+      .select(
+        `id, certifications, base_estimate,
+         industries!inner ( name )`,
+      )
+      .eq("id", id)
+      .single(),
+    supabase
+      .from("quote_lines")
+      .select(
+        `id, position, width_inches, height_inches, quantity,
+         products!inner ( name, category ),
+         materials!inner ( name, durability_score ),
+         cad_uploads ( original_filename, path_count )`,
+      )
+      .eq("quote_id", id)
+      .order("position", { ascending: true }),
+  ]);
 
-  if (quoteError || !quote) {
+  if (quoteRes.error || !quoteRes.data) {
+    return NextResponse.json({ error: "Quote not found" }, { status: 404 });
+  }
+  if (linesRes.error) {
     return NextResponse.json(
-      { error: "Quote not found" },
-      { status: 404 },
+      { error: "Failed to load quote lines", detail: linesRes.error.message },
+      { status: 500 },
     );
   }
 
-  const product = Array.isArray(quote.products) ? quote.products[0] : quote.products;
-  const material = Array.isArray(quote.materials) ? quote.materials[0] : quote.materials;
-  const industry = Array.isArray(quote.industries) ? quote.industries[0] : quote.industries;
-
-  if (!product || !material || !industry) {
+  const quote = quoteRes.data;
+  const linesRaw = linesRes.data ?? [];
+  if (linesRaw.length === 0) {
     return NextResponse.json(
-      { error: "Quote is missing related catalog rows" },
+      { error: "Quote has no line items to analyze" },
       { status: 422 },
     );
   }
 
+  const industry = Array.isArray(quote.industries) ? quote.industries[0] : quote.industries;
+  if (!industry) {
+    return NextResponse.json(
+      { error: "Quote is missing its industry row" },
+      { status: 422 },
+    );
+  }
+
+  const lines: LineAnalyzeInput[] = linesRaw.map((line) => {
+    const product = Array.isArray(line.products) ? line.products[0] : line.products;
+    const material = Array.isArray(line.materials) ? line.materials[0] : line.materials;
+    const cad = Array.isArray(line.cad_uploads) ? line.cad_uploads[0] : line.cad_uploads;
+    return {
+      productName: product?.name ?? "Product",
+      productCategory: product?.category ?? "unknown",
+      materialName: material?.name ?? "Material",
+      materialDurability: Number(material?.durability_score ?? 5),
+      widthInches: Number(line.width_inches),
+      heightInches: Number(line.height_inches),
+      quantity: Number(line.quantity),
+      cadPathCount: cad?.path_count ?? null,
+      cadFilename: cad?.original_filename ?? null,
+    };
+  });
+
   let result;
   try {
     result = await analyzeQuote({
-      productName: product.name,
-      productCategory: product.category,
-      materialName: material.name,
-      materialDurability: Number(material.durability_score),
-      widthInches: Number(quote.width_inches),
-      heightInches: Number(quote.height_inches),
-      quantity: Number(quote.quantity),
       industryName: industry.name,
       certifications: quote.certifications ?? [],
       baseEstimate: Number(quote.base_estimate),
+      lines,
     });
   } catch (err) {
+    if (err instanceof AIError) {
+      console.error("[analyze]", id, err.code, err.message);
+      const headers: Record<string, string> = {};
+      if (err.retryAfterSeconds) headers["Retry-After"] = String(err.retryAfterSeconds);
+      return NextResponse.json(
+        {
+          error: err.userMessage,
+          detail: err.userMessage,
+          code: err.code,
+          retryable: err.retryable,
+          retry_after_seconds: err.retryAfterSeconds,
+        },
+        { status: err.status, headers },
+      );
+    }
     const message = err instanceof Error ? err.message : String(err);
-    console.error("[analyze]", id, message);
+    console.error("[analyze]", id, "uncategorised:", message);
     return NextResponse.json(
-      { error: "AI analysis failed", detail: message },
+      {
+        error: "AI analysis failed unexpectedly. Please retry.",
+        detail: message,
+        code: "unknown",
+        retryable: true,
+      },
       { status: 502 },
     );
   }
 
   const { analysis, modelUsed, latencyMs, promptInputHash } = result;
 
-  // Persist results: update the quote and insert the audit row in parallel.
   const [updateResult, insertResult] = await Promise.all([
     supabase
       .from("quotes")

@@ -127,6 +127,103 @@ export type Database = {
           },
         ]
       }
+      cad_uploads: {
+        Row: {
+          created_at: string
+          estimator_id: string
+          file_size_bytes: number
+          height_inches: number | null
+          id: string
+          mime_type: string
+          original_filename: string
+          parse_error: string | null
+          path_count: number | null
+          storage_path: string
+          width_inches: number | null
+        }
+        Insert: {
+          created_at?: string
+          estimator_id: string
+          file_size_bytes: number
+          height_inches?: number | null
+          id?: string
+          mime_type: string
+          original_filename: string
+          parse_error?: string | null
+          path_count?: number | null
+          storage_path: string
+          width_inches?: number | null
+        }
+        Update: {
+          created_at?: string
+          estimator_id?: string
+          file_size_bytes?: number
+          height_inches?: number | null
+          id?: string
+          mime_type?: string
+          original_filename?: string
+          parse_error?: string | null
+          path_count?: number | null
+          storage_path?: string
+          width_inches?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cad_uploads_estimator_id_fkey"
+            columns: ["estimator_id"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          company: string | null
+          created_at: string
+          email: string | null
+          estimator_id: string
+          id: string
+          is_demo_sample: boolean
+          name: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          estimator_id: string
+          id?: string
+          is_demo_sample?: boolean
+          name: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          estimator_id?: string
+          id?: string
+          is_demo_sample?: boolean
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_estimator_id_fkey"
+            columns: ["estimator_id"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       industries: {
         Row: {
           certification_premium: number
@@ -223,6 +320,77 @@ export type Database = {
         }
         Relationships: []
       }
+      quote_lines: {
+        Row: {
+          cad_upload_id: string | null
+          created_at: string
+          height_inches: number
+          id: string
+          line_estimate: number
+          material_id: string
+          position: number
+          product_id: string
+          quantity: number
+          quote_id: string
+          width_inches: number
+        }
+        Insert: {
+          cad_upload_id?: string | null
+          created_at?: string
+          height_inches: number
+          id?: string
+          line_estimate: number
+          material_id: string
+          position?: number
+          product_id: string
+          quantity: number
+          quote_id: string
+          width_inches: number
+        }
+        Update: {
+          cad_upload_id?: string | null
+          created_at?: string
+          height_inches?: number
+          id?: string
+          line_estimate?: number
+          material_id?: string
+          position?: number
+          product_id?: string
+          quantity?: number
+          quote_id?: string
+          width_inches?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_lines_cad_upload_id_fkey"
+            columns: ["cad_upload_id"]
+            isOneToOne: false
+            referencedRelation: "cad_uploads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_lines_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_lines_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quotes: {
         Row: {
           ai_complexity_score: number | null
@@ -233,12 +401,14 @@ export type Database = {
           certifications: string[]
           created_at: string
           customer_email: string | null
+          customer_id: string | null
           customer_name: string
           estimator_id: string
           final_price: number | null
           height_inches: number
           id: string
           industry_id: string
+          is_demo_sample: boolean
           material_id: string
           notes: string | null
           product_id: string
@@ -256,12 +426,14 @@ export type Database = {
           certifications?: string[]
           created_at?: string
           customer_email?: string | null
+          customer_id?: string | null
           customer_name: string
           estimator_id: string
           final_price?: number | null
           height_inches: number
           id?: string
           industry_id: string
+          is_demo_sample?: boolean
           material_id: string
           notes?: string | null
           product_id: string
@@ -279,12 +451,14 @@ export type Database = {
           certifications?: string[]
           created_at?: string
           customer_email?: string | null
+          customer_id?: string | null
           customer_name?: string
           estimator_id?: string
           final_price?: number | null
           height_inches?: number
           id?: string
           industry_id?: string
+          is_demo_sample?: boolean
           material_id?: string
           notes?: string | null
           product_id?: string
@@ -294,6 +468,13 @@ export type Database = {
           width_inches?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "quotes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "quotes_estimator_id_fkey"
             columns: ["estimator_id"]

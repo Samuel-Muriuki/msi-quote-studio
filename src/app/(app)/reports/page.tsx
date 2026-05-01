@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { currency } from "@/lib/quote-helpers";
 import { QuoteStatusBadge } from "@/components/quote-status-badge";
+import { KpiValueAnimated, type KpiFormat } from "@/components/kpi-value-animated";
 import { cn } from "@/lib/utils";
 import {
   CategoryBarChart,
@@ -94,23 +95,20 @@ export default async function ReportsPage() {
       >
         <ReportKpi
           label="Total pipeline value"
-          value={
-            kpis.pipelineValue > 0 ? currency.format(kpis.pipelineValue) : "—"
-          }
+          value={kpis.pipelineValue > 0 ? kpis.pipelineValue : null}
+          format="currency"
           sub={`${kpis.pipelineCount} active quote${kpis.pipelineCount === 1 ? "" : "s"}`}
         />
         <ReportKpi
           label="Quotes this month"
-          value={String(kpis.quotesThisMonth)}
+          value={kpis.quotesThisMonth}
+          format="count"
           sub={`vs ${kpis.quotesLastMonth} last`}
         />
         <ReportKpi
           label="Conversion rate"
-          value={
-            kpis.conversionRate === null
-              ? "—"
-              : `${Math.round(kpis.conversionRate * 100)}%`
-          }
+          value={kpis.conversionRate === null ? null : kpis.conversionRate * 100}
+          format="percent"
           sub={
             kpis.conversionRate === null
               ? "no decisions yet"
@@ -120,9 +118,8 @@ export default async function ReportsPage() {
         />
         <ReportKpi
           label="Avg AI complexity"
-          value={
-            kpis.avgComplexity === null ? "—" : `${kpis.avgComplexity.toFixed(1)} / 10`
-          }
+          value={kpis.avgComplexity}
+          format="score"
           sub={
             kpis.avgComplexity === null
               ? "no analyses yet"
@@ -391,11 +388,13 @@ function buildTopPipeline(quotes: QuoteRow[]): QuoteRow[] {
 function ReportKpi({
   label,
   value,
+  format,
   sub,
   accent,
 }: {
   label: string;
-  value: string;
+  value: number | null;
+  format: KpiFormat;
   sub: string;
   accent?: boolean;
 }) {
@@ -409,14 +408,14 @@ function ReportKpi({
       <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-text-muted">
         {label}
       </p>
-      <p
+      <KpiValueAnimated
+        value={value}
+        format={format}
         className={cn(
-          "mt-2 font-heading text-2xl font-semibold tracking-tight",
+          "mt-2 block font-heading text-2xl font-semibold tracking-tight",
           accent ? "text-accent" : "text-text",
         )}
-      >
-        {value}
-      </p>
+      />
       <p className="mt-1 text-xs text-text-muted">{sub}</p>
     </article>
   );
