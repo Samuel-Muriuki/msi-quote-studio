@@ -13,6 +13,8 @@ export type LineInput = {
   widthInches: number;
   heightInches: number;
   quantity: number;
+  /** Optional CAD upload that produced this line's dimensions. */
+  cadUploadId?: string | null;
 };
 
 export type CreateQuoteInput = {
@@ -179,6 +181,7 @@ export async function createQuoteAction(
     height_inches: line.heightInches,
     quantity: line.quantity,
     line_estimate: lineEstimates[i],
+    cad_upload_id: line.cadUploadId ?? null,
   }));
 
   const { error: linesError } = await supabase.from("quote_lines").insert(lineRows);

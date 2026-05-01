@@ -313,13 +313,17 @@ export function NewQuoteForm({ products, materials, industries, customers }: Pro
         industryId,
         certifications,
         notes: notes || null,
-        lines: lines.map((line) => ({
-          productId: line.productId,
-          materialId: line.materialId,
-          widthInches: Number(line.widthInches),
-          heightInches: Number(line.heightInches),
-          quantity: Number(line.quantity),
-        })),
+        lines: lines.map((line) => {
+          const cad = cadByLine[line.uid];
+          return {
+            productId: line.productId,
+            materialId: line.materialId,
+            widthInches: Number(line.widthInches),
+            heightInches: Number(line.heightInches),
+            quantity: Number(line.quantity),
+            cadUploadId: cad?.status === "success" ? cad.result.id : null,
+          };
+        }),
       });
       if (result && !result.ok) {
         setError(result.error);
