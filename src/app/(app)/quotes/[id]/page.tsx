@@ -24,30 +24,38 @@ export default async function QuoteDetailPage({
   const { id } = await params;
   const supabase = createServerSupabaseClient();
 
-  const { data: quote, error } = await supabase
-    .from("quotes")
-    .select(
-      `
-      id, customer_name, customer_email, status, base_estimate,
-      width_inches, height_inches, quantity, certifications, notes,
-      ai_complexity_score, ai_suggested_price_low, ai_suggested_price_high, ai_rationale,
-      created_at, updated_at,
-      products ( name, category, base_price_per_sq_in, setup_fee ),
-      materials ( name, type, cost_per_sq_in ),
-      industries ( name, certification_premium, required_certifications )
-    `,
-    )
-    .eq("id", id)
-    .single();
+  const [quoteRes, linesRes] = await Promise.all([
+    supabase
+      .from("quotes")
+      .select(
+        `
+        id, customer_name, customer_email, status, base_estimate,
+        certifications, notes,
+        ai_complexity_score, ai_suggested_price_low, ai_suggested_price_high, ai_rationale,
+        created_at, updated_at,
+        industries ( name, certification_premium, required_certifications )
+      `,
+      )
+      .eq("id", id)
+      .single(),
+    supabase
+      .from("quote_lines")
+      .select(
+        `id, position, width_inches, height_inches, quantity, line_estimate,
+         products ( name, category, base_price_per_sq_in, setup_fee ),
+         materials ( name, type, cost_per_sq_in )`,
+      )
+      .eq("quote_id", id)
+      .order("position", { ascending: true }),
+  ]);
 
-  if (error || !quote) {
+  if (quoteRes.error || !quoteRes.data) {
     notFound();
   }
+  const quote = quoteRes.data;
+  const lines = linesRes.data ?? [];
 
-  const product = Array.isArray(quote.products) ? quote.products[0] : quote.products;
-  const material = Array.isArray(quote.materials) ? quote.materials[0] : quote.materials;
   const industry = Array.isArray(quote.industries) ? quote.industries[0] : quote.industries;
-  const area = pieceArea(Number(quote.width_inches), Number(quote.height_inches));
 
   // Pull the latest AI prediction for model + latency metadata if the quote has been analyzed.
   let initialAnalysis: AIAnalysisResult | null = null;
@@ -74,6 +82,22 @@ export default async function QuoteDetailPage({
       latency_ms: latest?.latency_ms ?? 0,
     };
   }
+
+  // For the benchmark block, use the first line as the representative
+  // product/material; multi-line cost analysis is a Phase 2 deliverable.
+  const firstLine = lines[0];
+  const firstProduct = firstLine
+    ? Array.isArray(firstLine.products)
+      ? firstLine.products[0]
+      : firstLine.products
+    : null;
+  const firstMaterial = firstLine
+    ? Array.isArray(firstLine.materials)
+      ? firstLine.materials[0]
+      : firstLine.materials
+    : null;
+
+  const totalQty = lines.reduce((sum, l) => sum + Number(l.quantity), 0);
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 px-5 py-10 sm:px-8 sm:py-14">
@@ -103,19 +127,51 @@ export default async function QuoteDetailPage({
       </header>
 
       <section className="rounded-lg border border-border bg-card p-6">
-        <h2 className="font-heading text-sm font-semibold uppercase tracking-[0.16em] text-text-secondary">
-          Summary
-        </h2>
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-heading text-sm font-semibold uppercase tracking-[0.16em] text-text-secondary">
+            Line items
+          </h2>
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-text-muted">
+            {lines.length} {lines.length === 1 ? "line" : "lines"}
+            {" · "}
+            {totalQty.toLocaleString()} pcs total
+          </p>
+        </div>
 
-        <div className="mt-4 grid gap-6 md:grid-cols-2">
-          <DetailRow label="Product" value={product?.name ?? "—"} sub={product?.category} />
-          <DetailRow label="Material" value={material?.name ?? "—"} sub={material?.type} />
-          <DetailRow
-            label="Dimensions"
-            value={`${Number(quote.width_inches)} × ${Number(quote.height_inches)} in`}
-            sub={`${area} sq in / piece`}
-          />
-          <DetailRow label="Quantity" value={Number(quote.quantity).toLocaleString()} />
+        <ul className="mt-4 divide-y divide-border">
+          {lines.map((line) => {
+            const product = Array.isArray(line.products) ? line.products[0] : line.products;
+            const material = Array.isArray(line.materials)
+              ? line.materials[0]
+              : line.materials;
+            const widthIn = Number(line.width_inches);
+            const heightIn = Number(line.height_inches);
+            const area = pieceArea(widthIn, heightIn);
+            return (
+              <li key={line.id} className="grid gap-3 py-4 sm:grid-cols-[1fr_auto] sm:items-start">
+                <div className="space-y-1">
+                  <p className="font-heading text-base font-semibold text-text">
+                    {product?.name ?? "Product"}
+                  </p>
+                  <p className="text-xs text-text-secondary">
+                    {[
+                      material?.name,
+                      `${widthIn} × ${heightIn} in (${area} sq in / piece)`,
+                      `${Number(line.quantity).toLocaleString()} pcs`,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                </div>
+                <p className="font-mono text-sm font-semibold tabular-nums text-text sm:text-right">
+                  {currency.format(Number(line.line_estimate))}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
+
+        <div className="mt-6 grid gap-4 border-t border-border pt-6 md:grid-cols-2">
           <DetailRow
             label="Industry"
             value={industry?.name ?? "—"}
@@ -163,22 +219,24 @@ export default async function QuoteDetailPage({
             </p>
           </div>
           <p className="text-xs text-text-muted">
-            Setup fee {currency.format(Number(product?.setup_fee ?? 0))} included.
+            Sum of {lines.length} {lines.length === 1 ? "line" : "lines"} including setup fees.
           </p>
         </div>
       </section>
 
       <AIPanel quoteId={String(quote.id)} initial={initialAnalysis} />
 
-      {industry && <BenchmarkBlock
-        industryName={industry.name}
-        product={product}
-        material={material}
-        widthInches={Number(quote.width_inches)}
-        heightInches={Number(quote.height_inches)}
-        quantity={Number(quote.quantity)}
-        certificationsCount={quote.certifications?.length ?? 0}
-      />}
+      {industry && firstLine && (
+        <BenchmarkBlock
+          industryName={industry.name}
+          product={firstProduct}
+          material={firstMaterial}
+          widthInches={Number(firstLine.width_inches)}
+          heightInches={Number(firstLine.height_inches)}
+          quantity={Number(firstLine.quantity)}
+          certificationsCount={quote.certifications?.length ?? 0}
+        />
+      )}
 
       <section
         aria-label="Quote actions"
