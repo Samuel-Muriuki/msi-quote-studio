@@ -90,6 +90,11 @@ export function AppSidebar({
                       isActive={active}
                       tooltip={item.label}
                       render={<Link href={item.href} />}
+                      className={
+                        active
+                          ? "bg-accent/15 text-accent font-semibold shadow-[inset_2px_0_0_0_var(--accent)] hover:bg-accent/20 data-active:bg-accent/15 data-active:text-accent"
+                          : undefined
+                      }
                     >
                       <Icon />
                       <span>{item.label}</span>
