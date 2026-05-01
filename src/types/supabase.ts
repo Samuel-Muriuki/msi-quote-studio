@@ -319,6 +319,7 @@ export type Database = {
       }
       quote_lines: {
         Row: {
+          cad_upload_id: string | null
           created_at: string
           height_inches: number
           id: string
@@ -331,6 +332,7 @@ export type Database = {
           width_inches: number
         }
         Insert: {
+          cad_upload_id?: string | null
           created_at?: string
           height_inches: number
           id?: string
@@ -343,6 +345,7 @@ export type Database = {
           width_inches: number
         }
         Update: {
+          cad_upload_id?: string | null
           created_at?: string
           height_inches?: number
           id?: string
@@ -355,6 +358,13 @@ export type Database = {
           width_inches?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "quote_lines_cad_upload_id_fkey"
+            columns: ["cad_upload_id"]
+            isOneToOne: false
+            referencedRelation: "cad_uploads"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "quote_lines_material_id_fkey"
             columns: ["material_id"]
