@@ -5,7 +5,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const DEMO_EMAIL = "demo@msi-quote-studio.com";
-const RETENTION_DAYS = 7;
+// 48-hour rolling window. Anything created via the shared demo account
+// older than this is swept (sample seeds are protected by is_demo_sample).
+// Same window applies if the database grows beyond ~100 MB — the public
+// disclosure is in the landing FAQ.
+const RETENTION_HOURS = 48;
 
 export async function GET(request: Request) {
   const expected = process.env.CRON_SECRET;
@@ -36,23 +40,40 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: true, deleted: 0, skipped: "no demo user" });
   }
 
-  const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const cutoff = new Date(Date.now() - RETENTION_HOURS * 60 * 60 * 1000).toISOString();
 
-  const { data: deleted, error: deleteError } = await supabase
-    .from("quotes")
-    .delete()
-    .eq("estimator_id", demoUser.id)
-    .eq("is_demo_sample", false)
-    .lt("created_at", cutoff)
-    .select("id");
+  const [quotesRes, customersRes] = await Promise.all([
+    supabase
+      .from("quotes")
+      .delete()
+      .eq("estimator_id", demoUser.id)
+      .eq("is_demo_sample", false)
+      .lt("created_at", cutoff)
+      .select("id"),
+    supabase
+      .from("customers")
+      .delete()
+      .eq("estimator_id", demoUser.id)
+      .eq("is_demo_sample", false)
+      .lt("created_at", cutoff)
+      .select("id"),
+  ]);
 
-  if (deleteError) {
-    return NextResponse.json({ ok: false, error: deleteError.message }, { status: 500 });
+  if (quotesRes.error || customersRes.error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: quotesRes.error?.message ?? customersRes.error?.message,
+      },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json({
     ok: true,
-    deleted: deleted?.length ?? 0,
+    deleted_quotes: quotesRes.data?.length ?? 0,
+    deleted_customers: customersRes.data?.length ?? 0,
     cutoff,
+    retention_hours: RETENTION_HOURS,
   });
 }
