@@ -1,89 +1,28 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { ThemeProvider as NextThemesProvider } from "next-themes";
 
-type Theme = "light" | "dark";
-
-type ThemeContextValue = {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
-  toggle: () => void;
-};
-
-const ThemeContext = createContext<ThemeContextValue | null>(null);
-
+// next-themes injects an inline script that runs before React hydrates and
+// before the first paint, so the dark class is set on <html> in time to style
+// streaming Suspense fallbacks correctly. Our previous custom implementation
+// relied on a script in app/layout.tsx that Turbopack dev sometimes failed to
+// execute before the skeleton paint, producing a multi-second flash.
+//
+// Storage key kept stable so existing users keep their preference.
 export const THEME_STORAGE_KEY = "msi-quote-studio.theme";
 
-function readInitialTheme(): Theme {
-  if (typeof window === "undefined") return "light";
-  try {
-    const stored = window.localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
-    if (stored === "light" || stored === "dark") return stored;
-  } catch {
-    // localStorage may be unavailable; fall through to media query
-  }
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
-}
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("light");
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    setThemeState(readInitialTheme());
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    const root = document.documentElement;
-    root.classList.toggle("dark", theme === "dark");
-  }, [hydrated, theme]);
-
-  const setTheme = useCallback((next: Theme) => {
-    setThemeState(next);
-    try {
-      window.localStorage.setItem(THEME_STORAGE_KEY, next);
-    } catch {
-      // ignore storage errors (private mode, quota, etc.)
-    }
-  }, []);
-
-  const toggle = useCallback(() => {
-    setThemeState((current) => {
-      const next: Theme = current === "dark" ? "light" : "dark";
-      try {
-        window.localStorage.setItem(THEME_STORAGE_KEY, next);
-      } catch {
-        // ignore storage errors
-      }
-      return next;
-    });
-  }, []);
-
-  const value = useMemo(
-    () => ({ theme, setTheme, toggle }),
-    [theme, setTheme, toggle],
-  );
-
   return (
-    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      storageKey={THEME_STORAGE_KEY}
+      disableTransitionOnChange
+    >
+      {children}
+    </NextThemesProvider>
   );
 }
 
-export function useTheme(): ThemeContextValue {
-  const ctx = useContext(ThemeContext);
-  if (!ctx) {
-    throw new Error("useTheme must be used within a ThemeProvider");
-  }
-  return ctx;
-}
+export { useTheme } from "next-themes";
