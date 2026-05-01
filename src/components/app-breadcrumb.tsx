@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import { usePathname } from "next/navigation";
 import {
   Breadcrumb,
@@ -67,17 +68,17 @@ export function AppBreadcrumb({ leafLabel }: { leafLabel?: string }) {
   return (
     <Breadcrumb>
       <BreadcrumbList>
-        {crumbs.map((crumb) => (
-          <BreadcrumbItem key={crumb.href}>
-            {crumb.isLast ? (
-              <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-            ) : (
-              <>
+        {crumbs.map((crumb, i) => (
+          <Fragment key={crumb.href}>
+            <BreadcrumbItem>
+              {crumb.isLast ? (
+                <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+              ) : (
                 <BreadcrumbLink href={crumb.href}>{crumb.label}</BreadcrumbLink>
-                <BreadcrumbSeparator />
-              </>
-            )}
-          </BreadcrumbItem>
+              )}
+            </BreadcrumbItem>
+            {i < crumbs.length - 1 && <BreadcrumbSeparator />}
+          </Fragment>
         ))}
       </BreadcrumbList>
     </Breadcrumb>
