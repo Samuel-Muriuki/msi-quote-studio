@@ -127,6 +127,56 @@ export type Database = {
           },
         ]
       }
+      cad_uploads: {
+        Row: {
+          created_at: string
+          estimator_id: string
+          file_size_bytes: number
+          height_inches: number | null
+          id: string
+          mime_type: string
+          original_filename: string
+          parse_error: string | null
+          path_count: number | null
+          storage_path: string
+          width_inches: number | null
+        }
+        Insert: {
+          created_at?: string
+          estimator_id: string
+          file_size_bytes: number
+          height_inches?: number | null
+          id?: string
+          mime_type: string
+          original_filename: string
+          parse_error?: string | null
+          path_count?: number | null
+          storage_path: string
+          width_inches?: number | null
+        }
+        Update: {
+          created_at?: string
+          estimator_id?: string
+          file_size_bytes?: number
+          height_inches?: number | null
+          id?: string
+          mime_type?: string
+          original_filename?: string
+          parse_error?: string | null
+          path_count?: number | null
+          storage_path?: string
+          width_inches?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cad_uploads_estimator_id_fkey"
+            columns: ["estimator_id"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           company: string | null
