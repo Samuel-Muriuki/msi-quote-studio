@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  FilePlus2,
   LayoutDashboard,
   LineChart,
   ListChecks,
@@ -21,6 +20,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { BrandMark } from "@/components/brand-mark";
@@ -35,12 +37,18 @@ type NavItem = {
   exact?: boolean;
   /** Disabled (route not built yet) — visible but not clickable. */
   comingSoon?: boolean;
+  /** Optional sub-items rendered under the parent when prefix-matched. */
+  children?: { href: string; label: string }[];
 };
 
 const PRIMARY_NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/quotes/new", label: "New quote", icon: FilePlus2, exact: true },
-  { href: "/quotes", label: "Quotes", icon: ListChecks },
+  {
+    href: "/quotes",
+    label: "Quotes",
+    icon: ListChecks,
+    children: [{ href: "/quotes/new", label: "New quote" }],
+  },
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/reports", label: "Reports", icon: LineChart },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -84,14 +92,28 @@ export function AppSidebar({
               {PRIMARY_NAV.map((item) => {
                 const active = isActive(item.href, pathname, item.exact);
                 const Icon = item.icon;
+                // Show sub-items when the parent prefix is matched OR a child is active.
+                const hasActiveChild = item.children?.some((c) =>
+                  isActive(c.href, pathname, true),
+                );
+                const showChildren = Boolean(
+                  item.children && (active || hasActiveChild),
+                );
+                // Parent is highlighted only when the user is on the parent itself,
+                // never when they're on a child route (the child gets its own
+                // highlight). exact-match catches /quotes; the prefix match would
+                // otherwise also highlight on /quotes/new.
+                const parentActive = item.children
+                  ? pathname === item.href
+                  : active;
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
-                      isActive={active}
+                      isActive={parentActive}
                       tooltip={item.label}
                       render={<Link href={item.href} />}
                       className={
-                        active
+                        parentActive
                           ? "bg-accent/15 text-accent font-semibold shadow-[inset_2px_0_0_0_var(--accent)] hover:bg-accent/20 data-active:bg-accent/15 data-active:text-accent"
                           : undefined
                       }
@@ -99,6 +121,28 @@ export function AppSidebar({
                       <Icon />
                       <span>{item.label}</span>
                     </SidebarMenuButton>
+                    {showChildren && (
+                      <SidebarMenuSub>
+                        {item.children!.map((child) => {
+                          const childActive = isActive(child.href, pathname, true);
+                          return (
+                            <SidebarMenuSubItem key={child.href}>
+                              <SidebarMenuSubButton
+                                isActive={childActive}
+                                render={<Link href={child.href} />}
+                                className={
+                                  childActive
+                                    ? "bg-accent/15 text-accent font-semibold shadow-[inset_2px_0_0_0_var(--accent)] hover:bg-accent/20 data-active:bg-accent/15 data-active:text-accent"
+                                    : undefined
+                                }
+                              >
+                                <span>{child.label}</span>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          );
+                        })}
+                      </SidebarMenuSub>
+                    )}
                   </SidebarMenuItem>
                 );
               })}
