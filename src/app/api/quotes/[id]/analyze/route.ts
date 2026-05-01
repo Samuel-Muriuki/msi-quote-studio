@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { analyzeQuote, type LineAnalyzeInput } from "@/lib/groq";
+import { AIError, analyzeQuote, type LineAnalyzeInput } from "@/lib/groq";
 
 export async function POST(
   _req: Request,
@@ -90,10 +90,30 @@ export async function POST(
       lines,
     });
   } catch (err) {
+    if (err instanceof AIError) {
+      console.error("[analyze]", id, err.code, err.message);
+      const headers: Record<string, string> = {};
+      if (err.retryAfterSeconds) headers["Retry-After"] = String(err.retryAfterSeconds);
+      return NextResponse.json(
+        {
+          error: err.userMessage,
+          detail: err.userMessage,
+          code: err.code,
+          retryable: err.retryable,
+          retry_after_seconds: err.retryAfterSeconds,
+        },
+        { status: err.status, headers },
+      );
+    }
     const message = err instanceof Error ? err.message : String(err);
-    console.error("[analyze]", id, message);
+    console.error("[analyze]", id, "uncategorised:", message);
     return NextResponse.json(
-      { error: "AI analysis failed", detail: message },
+      {
+        error: "AI analysis failed unexpectedly. Please retry.",
+        detail: message,
+        code: "unknown",
+        retryable: true,
+      },
       { status: 502 },
     );
   }
