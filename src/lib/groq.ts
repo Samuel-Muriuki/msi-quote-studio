@@ -12,7 +12,7 @@ const aiAnalysisSchema = z.object({
 
 export type AIAnalysis = z.infer<typeof aiAnalysisSchema>;
 
-export type AnalyzeQuoteInput = {
+export type LineAnalyzeInput = {
   productName: string;
   productCategory: string;
   materialName: string;
@@ -20,9 +20,17 @@ export type AnalyzeQuoteInput = {
   widthInches: number;
   heightInches: number;
   quantity: number;
+  /** Optional CAD complexity hint: number of drawing elements in the SVG. */
+  cadPathCount?: number | null;
+  /** Optional original CAD filename — useful context for the rationale. */
+  cadFilename?: string | null;
+};
+
+export type AnalyzeQuoteInput = {
   industryName: string;
   certifications: string[];
   baseEstimate: number;
+  lines: LineAnalyzeInput[];
 };
 
 export type AnalyzeQuoteResult = {
@@ -36,25 +44,40 @@ const SYSTEM_PROMPT = `You are an expert manufacturing estimator for a durable l
 
 You are precise, calibrated, and honest about uncertainty. Your rationale is direct — no fluff, no marketing language. You write like an engineer talking to another engineer.
 
+When a line includes a CAD path count, treat higher counts as a complexity signal: 1–10 paths is a simple shape, 10–50 is moderate, 50+ implies dense geometry that drives setup time and scrap risk.
+
 Return JSON only, with no commentary outside the JSON.`;
 
-function buildUserPrompt(input: AnalyzeQuoteInput): string {
-  return `Evaluate this job:
+function formatLine(line: LineAnalyzeInput, index: number): string {
+  const lines: string[] = [];
+  lines.push(`LINE ${index + 1}:`);
+  lines.push(`  PRODUCT:  ${line.productName} (${line.productCategory})`);
+  lines.push(`  MATERIAL: ${line.materialName} (durability ${line.materialDurability}/10)`);
+  lines.push(`  SIZE:     ${line.widthInches}" × ${line.heightInches}"`);
+  lines.push(`  QTY:      ${line.quantity}`);
+  if (line.cadPathCount != null) {
+    const tag = line.cadFilename ? ` (${line.cadFilename})` : "";
+    lines.push(`  CAD:      ${line.cadPathCount} drawing element${line.cadPathCount === 1 ? "" : "s"}${tag}`);
+  }
+  return lines.join("\n");
+}
 
-PRODUCT: ${input.productName} (${input.productCategory})
-MATERIAL: ${input.materialName} (durability ${input.materialDurability}/10)
-DIMENSIONS: ${input.widthInches}" × ${input.heightInches}"
-QUANTITY: ${input.quantity}
+function buildUserPrompt(input: AnalyzeQuoteInput): string {
+  const linesBlock = input.lines.map(formatLine).join("\n\n");
+  return `Evaluate this job (${input.lines.length} line${input.lines.length === 1 ? "" : "s"}):
+
+${linesBlock}
+
 INDUSTRY: ${input.industryName}
 CERTIFICATIONS REQUIRED: ${input.certifications.length ? input.certifications.join(", ") : "none"}
-RULE-BASED BASE ESTIMATE: $${input.baseEstimate.toFixed(2)}
+RULE-BASED BASE ESTIMATE (sum of all lines): $${input.baseEstimate.toFixed(2)}
 
 Return:
 {
-  "complexity_score": <integer 1-10, where 1=trivial and 10=highly complex>,
-  "suggested_price_low": <number, USD>,
-  "suggested_price_high": <number, USD>,
-  "rationale": "<2-3 sentences explaining what drives the complexity and why the price range differs (or doesn't) from the base estimate>"
+  "complexity_score": <integer 1-10, where 1=trivial and 10=highly complex; reflect the most complex line>,
+  "suggested_price_low": <number, USD, total for the whole quote>,
+  "suggested_price_high": <number, USD, total for the whole quote>,
+  "rationale": "<2-3 sentences explaining what drives the complexity. If multiple lines, mention which line dominates. Reference CAD path count when relevant.>"
 }`;
 }
 
@@ -73,6 +96,10 @@ export async function analyzeQuote(
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     throw new Error("GROQ_API_KEY is required");
+  }
+
+  if (!input.lines || input.lines.length === 0) {
+    throw new Error("analyzeQuote requires at least one line");
   }
 
   const model = options?.model ?? DEFAULT_MODEL;
@@ -113,7 +140,6 @@ export async function analyzeQuote(
     );
   }
 
-  // Sanity check: low <= high
   if (result.data.suggested_price_low > result.data.suggested_price_high) {
     throw new Error(
       `Groq returned suggested_price_low > suggested_price_high (${result.data.suggested_price_low} > ${result.data.suggested_price_high})`,
