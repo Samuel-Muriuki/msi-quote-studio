@@ -12,9 +12,10 @@ export type QuotePdfBuildResult =
   | { ok: false; error: string; status: 401 | 404 | 500 };
 
 /**
- * Builds the branded PDF for a quote and returns the binary buffer plus
- * the rendered data. Used by both the GET /api/quotes/[id]/pdf route
- * (download) and the email-quote-to-customer server action (attachment).
+ * Builds the branded PDF for a quote and returns the binary buffer plus the
+ * rendered data. Reads line items from quote_lines (one row per product /
+ * material / dimension combination) and preserves the per-quote setup-fee
+ * line for transparency.
  *
  * Caller is responsible for auth + ownership checks before invoking.
  */
@@ -23,66 +24,92 @@ export async function buildQuotePdfBuffer(
   fromEmail?: string,
 ): Promise<QuotePdfBuildResult> {
   const supabase = createServerSupabaseClient();
-  const { data: quote, error } = await supabase
-    .from("quotes")
-    .select(
-      `id, customer_name, customer_email, status, base_estimate, final_price,
-       width_inches, height_inches, quantity, certifications, notes,
-       ai_complexity_score, ai_suggested_price_low, ai_suggested_price_high, ai_rationale,
-       created_at,
-       products ( name, category, base_price_per_sq_in, setup_fee ),
-       materials ( name, type ),
-       industries ( name, certification_premium )`,
-    )
-    .eq("id", quoteId)
-    .single();
 
+  const [quoteRes, linesRes] = await Promise.all([
+    supabase
+      .from("quotes")
+      .select(
+        `id, customer_name, customer_email, status, base_estimate, final_price,
+         certifications, notes,
+         ai_complexity_score, ai_suggested_price_low, ai_suggested_price_high, ai_rationale,
+         created_at,
+         industries ( name, certification_premium )`,
+      )
+      .eq("id", quoteId)
+      .single(),
+    supabase
+      .from("quote_lines")
+      .select(
+        `id, position, width_inches, height_inches, quantity, line_estimate,
+         products ( name, category, base_price_per_sq_in, setup_fee ),
+         materials ( name, type )`,
+      )
+      .eq("quote_id", quoteId)
+      .order("position", { ascending: true }),
+  ]);
+
+  const { data: quote, error } = quoteRes;
   if (error || !quote) {
     return { ok: false, error: "Quote not found", status: 404 };
   }
+  if (linesRes.error) {
+    return { ok: false, error: linesRes.error.message, status: 500 };
+  }
+  const lines = linesRes.data ?? [];
 
-  const product = Array.isArray(quote.products) ? quote.products[0] : quote.products;
-  const material = Array.isArray(quote.materials) ? quote.materials[0] : quote.materials;
   const industry = Array.isArray(quote.industries) ? quote.industries[0] : quote.industries;
-
-  const widthIn = Number(quote.width_inches);
-  const heightIn = Number(quote.height_inches);
-  const qty = Number(quote.quantity);
-  const area = pieceArea(widthIn, heightIn);
-
-  const setupFee = Number(product?.setup_fee ?? 0);
   const baseEstimate = Number(quote.base_estimate);
-  const variableTotal = Math.max(baseEstimate - setupFee, 0);
-  const unitPrice = qty > 0 ? variableTotal / qty : 0;
 
-  const items: QuotePdfLineItem[] = [
-    {
+  const items: QuotePdfLineItem[] = [];
+  let setupFeeTotal = 0;
+
+  for (const line of lines) {
+    const product = Array.isArray(line.products) ? line.products[0] : line.products;
+    const material = Array.isArray(line.materials) ? line.materials[0] : line.materials;
+
+    const widthIn = Number(line.width_inches);
+    const heightIn = Number(line.height_inches);
+    const qty = Number(line.quantity);
+    const area = pieceArea(widthIn, heightIn);
+
+    const lineEstimate = Number(line.line_estimate);
+    const setupFee = Number(product?.setup_fee ?? 0);
+    const variableTotal = Math.max(lineEstimate - setupFee, 0);
+    const unitPrice = qty > 0 ? variableTotal / qty : 0;
+
+    items.push({
       description: product?.name ?? "Product",
       subDescription: [
         material?.name,
         `${widthIn} × ${heightIn} in (${area.toFixed(2)} sq in / piece)`,
-        industry?.name,
-        Array.isArray(quote.certifications) && quote.certifications.length > 0
-          ? `Certifications: ${quote.certifications.join(", ")}`
-          : null,
       ]
         .filter(Boolean)
         .join(" · "),
       quantity: qty,
       unitPrice,
       lineTotal: variableTotal,
-    },
-  ];
+    });
 
-  if (setupFee > 0) {
+    setupFeeTotal += setupFee;
+  }
+
+  if (setupFeeTotal > 0) {
     items.push({
-      description: "Setup & tooling",
+      description: lines.length > 1 ? "Setup & tooling (all lines)" : "Setup & tooling",
       subDescription: "One-time per run",
       quantity: 1,
-      unitPrice: setupFee,
-      lineTotal: setupFee,
+      unitPrice: setupFeeTotal,
+      lineTotal: setupFeeTotal,
     });
   }
+
+  // Append a per-quote summary line for industry + certifications so the PDF
+  // still shows that context without cluttering each line.
+  const certs = Array.isArray(quote.certifications) ? quote.certifications : [];
+  const summaryBits = [
+    industry?.name ? `Industry: ${industry.name}` : null,
+    certs.length > 0 ? `Certifications: ${certs.join(", ")}` : null,
+  ].filter(Boolean);
 
   const subtotal = items.reduce((sum, it) => sum + it.lineTotal, 0);
   const total = baseEstimate;
@@ -118,8 +145,12 @@ export async function buildQuotePdfBuffer(
           }
         : undefined,
 
-    terms:
+    terms: [
       "Quote valid for 30 days from issue date. Prices in USD. Production lead time confirmed on PO receipt. Standard shipping terms FOB origin unless otherwise specified.",
+      summaryBits.length > 0 ? summaryBits.join(" · ") : "",
+    ]
+      .filter(Boolean)
+      .join(" "),
   };
 
   const buffer = (await renderToBuffer(<QuotePdfDocument data={data} />)) as Buffer;
