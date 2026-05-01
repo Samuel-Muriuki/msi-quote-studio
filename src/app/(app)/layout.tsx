@@ -1,9 +1,13 @@
-import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { SignOutButton } from "@/components/sign-out-button";
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+import { AppBreadcrumb } from "@/components/app-breadcrumb";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth.api.getSession({
@@ -14,28 +18,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/sign-in");
   }
 
+  const user = {
+    name: session.user.name || session.user.email.split("@")[0],
+    email: session.user.email,
+  };
+
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-3 sm:px-8">
-          <Link
-            href="/dashboard"
-            className="font-heading text-lg font-semibold tracking-tight"
-          >
-            <span className="text-text">MSI</span>{" "}
-            <span className="text-accent">Quote</span>{" "}
-            <span className="text-text">Studio</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <span className="hidden text-sm text-text-secondary sm:inline">
-              {session.user.name || session.user.email}
-            </span>
-            <ThemeToggle />
-            <SignOutButton />
-          </div>
-        </div>
-      </header>
-      <main className="flex-1">{children}</main>
-    </div>
+    <SidebarProvider>
+      <AppSidebar user={user} />
+      <SidebarInset>
+        <header className="sticky top-0 z-20 flex h-12 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-6">
+          <SidebarTrigger className="-ml-1" />
+          <div className="h-4 w-px bg-border" aria-hidden />
+          <AppBreadcrumb />
+        </header>
+        <div className="flex flex-1 flex-col">{children}</div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
