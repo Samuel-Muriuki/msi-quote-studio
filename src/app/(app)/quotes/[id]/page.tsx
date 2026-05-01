@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Download } from "lucide-react";
+import { ArrowLeft, Download, Pencil } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { pieceArea } from "@/lib/estimator";
 import { currencyDetailed as currency } from "@/lib/quote-helpers";
@@ -292,6 +292,13 @@ export default async function QuoteDetailPage({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={`/quotes/${quote.id}/edit`}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-text-secondary transition-colors hover:border-border-strong hover:text-text"
+            >
+              <Pencil className="size-3" aria-hidden />
+              Edit
+            </Link>
             <a
               href={`/api/quotes/${quote.id}/pdf`}
               download
