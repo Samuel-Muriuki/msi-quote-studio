@@ -23,6 +23,7 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
+import { BrandMark } from "@/components/brand-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SignOutButton } from "@/components/sign-out-button";
 
@@ -67,9 +68,7 @@ export function AppSidebar({
           href="/dashboard"
           className="flex items-center gap-2 px-2 py-1.5 font-heading text-base font-semibold tracking-tight"
         >
-          <span className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-bold">
-            M
-          </span>
+          <BrandMark className="size-7" />
           <span className="group-data-[collapsible=icon]:hidden">
             <span className="text-text">MSI</span>{" "}
             <span className="text-accent">Quote</span>{" "}
