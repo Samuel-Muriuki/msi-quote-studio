@@ -132,4 +132,19 @@
   html {
     @apply font-sans;
   }
+
+}
+
+/* Hide scrollbars globally — page still scrolls, only the track + thumb
+   are suppressed for a cleaner UI surface and screenshot-friendly chrome.
+   Outside @layer base on purpose so utility classes can't override it. */
+* {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE / old Edge */
+}
+*::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+  background: transparent !important;
 }
