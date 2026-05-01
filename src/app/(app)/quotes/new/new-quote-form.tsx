@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState, useTransition, type FormEvent } from "react";
-import { AlertCircle, UserPlus } from "lucide-react";
+import { AlertCircle, Plus, Trash2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,6 +48,16 @@ type Props = {
   customers: CustomerRow[];
 };
 
+type LineState = {
+  /** Stable per-render id for React keys (UUID generated on add). */
+  uid: string;
+  productId: string;
+  materialId: string;
+  widthInches: string;
+  heightInches: string;
+  quantity: string;
+};
+
 const CATEGORY_LABELS: Record<string, string> = {
   nameplate: "Nameplates",
   overlay: "Overlays",
@@ -71,16 +81,23 @@ const currency = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
+function emptyLine(): LineState {
+  return {
+    uid: crypto.randomUUID(),
+    productId: "",
+    materialId: "",
+    widthInches: "",
+    heightInches: "",
+    quantity: "",
+  };
+}
+
 export function NewQuoteForm({ products, materials, industries, customers }: Props) {
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
-  const [productId, setProductId] = useState("");
-  const [materialId, setMaterialId] = useState("");
   const [industryId, setIndustryId] = useState("");
-  const [widthInches, setWidthInches] = useState("");
-  const [heightInches, setHeightInches] = useState("");
-  const [quantity, setQuantity] = useState("");
+  const [lines, setLines] = useState<LineState[]>([emptyLine()]);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -101,6 +118,20 @@ export function NewQuoteForm({ products, materials, industries, customers }: Pro
     setCustomerId(null);
     setCustomerName("");
     setCustomerEmail("");
+  }
+
+  function updateLine(uid: string, patch: Partial<LineState>) {
+    setLines((current) => current.map((l) => (l.uid === uid ? { ...l, ...patch } : l)));
+  }
+
+  function addLine() {
+    setLines((current) => [...current, emptyLine()]);
+  }
+
+  function removeLine(uid: string) {
+    setLines((current) =>
+      current.length === 1 ? current : current.filter((l) => l.uid !== uid),
+    );
   }
 
   const groupedProducts = useMemo(() => {
@@ -125,28 +156,63 @@ export function NewQuoteForm({ products, materials, industries, customers }: Pro
     return groups;
   }, [materials]);
 
+  const productOptions = useMemo(
+    () =>
+      [...groupedProducts.entries()].flatMap(([category, items]) =>
+        items.map((p) => ({
+          value: p.id,
+          label: p.name,
+          group: CATEGORY_LABELS[category] ?? category,
+          sublabel: `Setup ${"$"}${Number(p.setup_fee).toLocaleString()} · min ${p.min_qty} pcs`,
+        })),
+      ),
+    [groupedProducts],
+  );
+  const materialOptions = useMemo(
+    () =>
+      [...groupedMaterials.entries()].flatMap(([type, items]) =>
+        items.map((m) => ({
+          value: m.id,
+          label: m.name,
+          group: MATERIAL_TYPE_LABELS[type] ?? type,
+          sublabel: `Durability ${m.durability_score}/10`,
+        })),
+      ),
+    [groupedMaterials],
+  );
+
   const selectedIndustry = industries.find((i) => i.id === industryId);
-  const selectedProduct = products.find((p) => p.id === productId);
   const certifications = selectedIndustry?.required_certifications ?? [];
 
-  const widthNum = Number(widthInches);
-  const heightNum = Number(heightInches);
-  const quantityNum = Number(quantity);
+  // Per-line estimate + aggregate.
+  const lineEstimates = lines.map((line) => {
+    const product = products.find((p) => p.id === line.productId);
+    const widthNum = Number(line.widthInches);
+    const heightNum = Number(line.heightInches);
+    const qtyNum = Number(line.quantity);
+    if (
+      !product ||
+      !selectedIndustry ||
+      !Number.isFinite(widthNum) || widthNum <= 0 ||
+      !Number.isFinite(heightNum) || heightNum <= 0 ||
+      !Number.isInteger(qtyNum) || qtyNum <= 0
+    ) {
+      return null;
+    }
+    return calculateBaseEstimate({
+      basePricePerSqIn: Number(product.base_price_per_sq_in),
+      setupFee: Number(product.setup_fee),
+      widthInches: widthNum,
+      heightInches: heightNum,
+      quantity: qtyNum,
+      certificationPremium: Number(selectedIndustry.certification_premium),
+    });
+  });
 
-  const livePreview =
-    selectedProduct && selectedIndustry &&
-    Number.isFinite(widthNum) && widthNum > 0 &&
-    Number.isFinite(heightNum) && heightNum > 0 &&
-    Number.isInteger(quantityNum) && quantityNum > 0
-      ? calculateBaseEstimate({
-          basePricePerSqIn: Number(selectedProduct.base_price_per_sq_in),
-          setupFee: Number(selectedProduct.setup_fee),
-          widthInches: widthNum,
-          heightInches: heightNum,
-          quantity: quantityNum,
-          certificationPremium: Number(selectedIndustry.certification_premium),
-        })
-      : null;
+  const allLinesValid = lineEstimates.every((e) => e !== null);
+  const livePreviewTotal = allLinesValid
+    ? lineEstimates.reduce((sum, e) => sum + (e ?? 0), 0)
+    : null;
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -157,20 +223,20 @@ export function NewQuoteForm({ products, materials, industries, customers }: Pro
         customerId,
         customerName,
         customerEmail: customerEmail || null,
-        productId,
-        materialId,
         industryId,
-        widthInches: widthNum,
-        heightInches: heightNum,
-        quantity: quantityNum,
         certifications,
         notes: notes || null,
+        lines: lines.map((line) => ({
+          productId: line.productId,
+          materialId: line.materialId,
+          widthInches: Number(line.widthInches),
+          heightInches: Number(line.heightInches),
+          quantity: Number(line.quantity),
+        })),
       });
       if (result && !result.ok) {
         setError(result.error);
       }
-      // success path: server action calls redirect() which throws a redirect signal,
-      // so we never reach a "ok: true" branch in the client.
     });
   }
 
@@ -245,93 +311,131 @@ export function NewQuoteForm({ products, materials, industries, customers }: Pro
         )}
       </Section>
 
-      <Section title="Product">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="product" label="Product" required>
-            <SearchableSelect
-              ariaLabel="Product"
-              placeholder="Select a product"
-              searchPlaceholder="Search 16 products…"
-              value={productId || null}
-              onValueChange={setProductId}
-              options={[...groupedProducts.entries()].flatMap(([category, items]) =>
-                items.map((p) => ({
-                  value: p.id,
-                  label: p.name,
-                  group: CATEGORY_LABELS[category] ?? category,
-                  sublabel: `Setup ${"$"}${Number(p.setup_fee).toLocaleString()} · min ${p.min_qty} pcs`,
-                })),
-              )}
-            />
-          </Field>
+      <Section
+        title="Lines"
+        description="Add one row per distinct product/material/dimension combination."
+      >
+        <div className="space-y-4">
+          {lines.map((line, i) => {
+            const lineEstimate = lineEstimates[i];
+            const lineProduct = products.find((p) => p.id === line.productId);
+            const qtyNum = Number(line.quantity);
+            const minQtyWarning =
+              lineProduct && line.quantity && qtyNum > 0 && qtyNum < lineProduct.min_qty;
+            return (
+              <div
+                key={line.uid}
+                className="rounded-lg border border-border bg-surface-1 p-4 shadow-sm"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-text-muted">
+                    Line {i + 1}
+                  </p>
+                  <div className="flex items-center gap-3">
+                    {lineEstimate !== null && (
+                      <span className="font-mono text-xs tabular-nums text-text-secondary">
+                        {currency.format(lineEstimate)}
+                      </span>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => removeLine(line.uid)}
+                      disabled={lines.length === 1}
+                      aria-label={`Remove line ${i + 1}`}
+                      title={lines.length === 1 ? "At least one line is required" : "Remove line"}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
+                </div>
 
-          <Field id="material" label="Material" required>
-            <SearchableSelect
-              ariaLabel="Material"
-              placeholder="Select a material"
-              searchPlaceholder="Search 14 materials…"
-              value={materialId || null}
-              onValueChange={setMaterialId}
-              options={[...groupedMaterials.entries()].flatMap(([type, items]) =>
-                items.map((m) => ({
-                  value: m.id,
-                  label: m.name,
-                  group: MATERIAL_TYPE_LABELS[type] ?? type,
-                  sublabel: `Durability ${m.durability_score}/10`,
-                })),
-              )}
-            />
-          </Field>
-        </div>
-      </Section>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <Field id={`product-${line.uid}`} label="Product" required>
+                    <SearchableSelect
+                      ariaLabel="Product"
+                      placeholder="Select a product"
+                      searchPlaceholder={`Search ${products.length} products…`}
+                      value={line.productId || null}
+                      onValueChange={(v) => updateLine(line.uid, { productId: v })}
+                      options={productOptions}
+                    />
+                  </Field>
+                  <Field id={`material-${line.uid}`} label="Material" required>
+                    <SearchableSelect
+                      ariaLabel="Material"
+                      placeholder="Select a material"
+                      searchPlaceholder={`Search ${materials.length} materials…`}
+                      value={line.materialId || null}
+                      onValueChange={(v) => updateLine(line.uid, { materialId: v })}
+                      options={materialOptions}
+                    />
+                  </Field>
+                </div>
 
-      <Section title="Dimensions">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Field id="width" label="Width (in)" required>
-            <Input
-              id="width"
-              type="number"
-              inputMode="decimal"
-              step="0.001"
-              min="0.001"
-              required
-              value={widthInches}
-              onChange={(e) => setWidthInches(e.target.value)}
-              placeholder="3.000"
-            />
-          </Field>
-          <Field id="height" label="Height (in)" required>
-            <Input
-              id="height"
-              type="number"
-              inputMode="decimal"
-              step="0.001"
-              min="0.001"
-              required
-              value={heightInches}
-              onChange={(e) => setHeightInches(e.target.value)}
-              placeholder="1.500"
-            />
-          </Field>
-          <Field id="quantity" label="Quantity" required>
-            <Input
-              id="quantity"
-              type="number"
-              inputMode="numeric"
-              step="1"
-              min="1"
-              required
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              placeholder="500"
-            />
-          </Field>
+                <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                  <Field id={`width-${line.uid}`} label="Width (in)" required>
+                    <Input
+                      id={`width-${line.uid}`}
+                      type="number"
+                      inputMode="decimal"
+                      step="0.001"
+                      min="0.001"
+                      required
+                      value={line.widthInches}
+                      onChange={(e) => updateLine(line.uid, { widthInches: e.target.value })}
+                      placeholder="3.000"
+                    />
+                  </Field>
+                  <Field id={`height-${line.uid}`} label="Height (in)" required>
+                    <Input
+                      id={`height-${line.uid}`}
+                      type="number"
+                      inputMode="decimal"
+                      step="0.001"
+                      min="0.001"
+                      required
+                      value={line.heightInches}
+                      onChange={(e) => updateLine(line.uid, { heightInches: e.target.value })}
+                      placeholder="1.500"
+                    />
+                  </Field>
+                  <Field id={`quantity-${line.uid}`} label="Quantity" required>
+                    <Input
+                      id={`quantity-${line.uid}`}
+                      type="number"
+                      inputMode="numeric"
+                      step="1"
+                      min="1"
+                      required
+                      value={line.quantity}
+                      onChange={(e) => updateLine(line.uid, { quantity: e.target.value })}
+                      placeholder="500"
+                    />
+                  </Field>
+                </div>
+
+                {minQtyWarning && (
+                  <p className="mt-2 text-xs text-warning">
+                    Minimum order quantity for this product is {lineProduct?.min_qty}.
+                  </p>
+                )}
+              </div>
+            );
+          })}
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addLine}
+            className="gap-1.5"
+          >
+            <Plus className="size-3.5" />
+            Add another line
+          </Button>
         </div>
-        {selectedProduct && quantity && quantityNum > 0 && quantityNum < selectedProduct.min_qty && (
-          <p className="text-xs text-warning">
-            Minimum order quantity for this product is {selectedProduct.min_qty}.
-          </p>
-        )}
       </Section>
 
       <Section title="Industry & certifications">
@@ -339,7 +443,7 @@ export function NewQuoteForm({ products, materials, industries, customers }: Pro
           <SearchableSelect
             ariaLabel="Industry"
             placeholder="Select an industry"
-            searchPlaceholder="Search 8 industries…"
+            searchPlaceholder={`Search ${industries.length} industries…`}
             value={industryId || null}
             onValueChange={setIndustryId}
             options={industries.map((i) => ({
@@ -380,16 +484,17 @@ export function NewQuoteForm({ products, materials, industries, customers }: Pro
         </Field>
       </Section>
 
-      {livePreview !== null && (
+      {livePreviewTotal !== null && (
         <div className="rounded-md border border-accent/30 bg-accent/5 p-4">
           <p className="text-xs font-mono uppercase tracking-[0.16em] text-accent">
             Live base estimate (rule-based)
           </p>
           <p className="mt-2 font-heading text-3xl font-semibold tracking-tight text-text">
-            {currency.format(livePreview)}
+            {currency.format(livePreviewTotal)}
           </p>
           <p className="mt-1 text-xs text-text-muted">
-            Includes setup fee + ({widthNum} × {heightNum} sq in × {quantityNum} units × {selectedIndustry?.certification_premium}× industry premium). The AI score and price band land on the quote detail page after submit.
+            Sum of {lines.length} {lines.length === 1 ? "line" : "lines"} including setup fees
+            and the {selectedIndustry?.name} ×{Number(selectedIndustry?.certification_premium).toFixed(2)} certification premium. The AI score and price band land on the quote detail page after submit.
           </p>
         </div>
       )}
@@ -421,10 +526,21 @@ export function NewQuoteForm({ products, materials, industries, customers }: Pro
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
   return (
     <section className="space-y-4">
-      <h2 className="font-heading text-lg font-semibold text-text">{title}</h2>
+      <div className="space-y-1">
+        <h2 className="font-heading text-lg font-semibold text-text">{title}</h2>
+        {description && <p className="text-xs text-text-muted">{description}</p>}
+      </div>
       <div className="space-y-4">{children}</div>
     </section>
   );

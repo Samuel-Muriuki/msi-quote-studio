@@ -267,6 +267,67 @@ export type Database = {
         }
         Relationships: []
       }
+      quote_lines: {
+        Row: {
+          created_at: string
+          height_inches: number
+          id: string
+          line_estimate: number
+          material_id: string
+          position: number
+          product_id: string
+          quantity: number
+          quote_id: string
+          width_inches: number
+        }
+        Insert: {
+          created_at?: string
+          height_inches: number
+          id?: string
+          line_estimate: number
+          material_id: string
+          position?: number
+          product_id: string
+          quantity: number
+          quote_id: string
+          width_inches: number
+        }
+        Update: {
+          created_at?: string
+          height_inches?: number
+          id?: string
+          line_estimate?: number
+          material_id?: string
+          position?: number
+          product_id?: string
+          quantity?: number
+          quote_id?: string
+          width_inches?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_lines_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_lines_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quotes: {
         Row: {
           ai_complexity_score: number | null
