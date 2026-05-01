@@ -11,8 +11,10 @@ import {
   deriveQuoteBreakdown,
   deltasVsBenchmark,
 } from "@/lib/cost-breakdown";
+import { brevoIsConfigured } from "@/lib/brevo";
 import { AIPanel, type AIAnalysisResult } from "./ai-panel";
 import { QuoteActions } from "./quote-actions";
+import { EmailQuoteButton } from "./email-quote-button";
 
 export default async function QuoteDetailPage({
   params,
@@ -192,14 +194,23 @@ export default async function QuoteDetailPage({
               dashboard and pipeline KPIs immediately.
             </p>
           </div>
-          <a
-            href={`/api/quotes/${quote.id}/pdf`}
-            download
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-text-secondary transition-colors hover:border-border-strong hover:text-text"
-          >
-            <Download className="size-3" aria-hidden />
-            Download PDF
-          </a>
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href={`/api/quotes/${quote.id}/pdf`}
+              download
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-text-secondary transition-colors hover:border-border-strong hover:text-text"
+            >
+              <Download className="size-3" aria-hidden />
+              Download PDF
+            </a>
+            <EmailQuoteButton
+              quoteId={String(quote.id)}
+              defaultRecipient={quote.customer_email}
+              customerName={quote.customer_name}
+              quoteNumber={`Q-${String(quote.id).slice(0, 8).toUpperCase()}`}
+              emailConfigured={brevoIsConfigured()}
+            />
+          </div>
         </div>
         <div className="mt-4">
           <QuoteActions quoteId={String(quote.id)} status={quote.status} />
