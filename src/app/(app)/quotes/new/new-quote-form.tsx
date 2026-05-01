@@ -1,8 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition, type FormEvent } from "react";
-import { AlertCircle, Plus, Sparkles, Trash2, UserPlus } from "lucide-react";
+import { useMemo, useRef, useState, useTransition, type FormEvent } from "react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  FileUp,
+  Loader2,
+  Plus,
+  Sparkles,
+  Trash2,
+  UserPlus,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +20,7 @@ import { SearchableSelect } from "@/components/searchable-select";
 import { calculateBaseEstimate } from "@/lib/estimator";
 import { generateQuoteSeed } from "@/lib/demo-fill";
 import { createQuoteAction } from "./actions";
+import { uploadCadFileAction, type CadUploadResult } from "./cad-actions";
 
 type ProductRow = {
   id: string;
@@ -93,6 +103,12 @@ function emptyLine(): LineState {
   };
 }
 
+type CadState =
+  | { status: "idle" }
+  | { status: "uploading"; filename: string }
+  | { status: "success"; result: Extract<CadUploadResult, { ok: true }> }
+  | { status: "error"; message: string };
+
 export function NewQuoteForm({ products, materials, industries, customers }: Props) {
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState("");
@@ -102,6 +118,8 @@ export function NewQuoteForm({ products, materials, industries, customers }: Pro
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [cadByLine, setCadByLine] = useState<Record<string, CadState>>({});
+  const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const selectedCustomer = customerId
     ? customers.find((c) => c.id === customerId) ?? null
@@ -133,6 +151,51 @@ export function NewQuoteForm({ products, materials, industries, customers }: Pro
     setLines((current) =>
       current.length === 1 ? current : current.filter((l) => l.uid !== uid),
     );
+    setCadByLine((current) => {
+      const next = { ...current };
+      delete next[uid];
+      return next;
+    });
+  }
+
+  async function handleCadUpload(uid: string, file: File) {
+    setCadByLine((current) => ({
+      ...current,
+      [uid]: { status: "uploading", filename: file.name },
+    }));
+    const formData = new FormData();
+    formData.append("file", file);
+    const result = await uploadCadFileAction(formData);
+    if (!result.ok) {
+      setCadByLine((current) => ({
+        ...current,
+        [uid]: { status: "error", message: result.error },
+      }));
+      return;
+    }
+    setCadByLine((current) => ({
+      ...current,
+      [uid]: { status: "success", result },
+    }));
+  }
+
+  function applyCadDimensions(uid: string) {
+    const cad = cadByLine[uid];
+    if (!cad || cad.status !== "success") return;
+    updateLine(uid, {
+      widthInches: cad.result.widthInches.toFixed(3),
+      heightInches: cad.result.heightInches.toFixed(3),
+    });
+  }
+
+  function clearCadUpload(uid: string) {
+    setCadByLine((current) => {
+      const next = { ...current };
+      delete next[uid];
+      return next;
+    });
+    const input = fileInputs.current[uid];
+    if (input) input.value = "";
   }
 
   function autofill() {
@@ -458,6 +521,27 @@ export function NewQuoteForm({ products, materials, industries, customers }: Pro
                     Minimum order quantity for this product is {lineProduct?.min_qty}.
                   </p>
                 )}
+
+                <div className="mt-3 border-t border-border pt-3">
+                  <input
+                    ref={(el) => {
+                      fileInputs.current[line.uid] = el;
+                    }}
+                    type="file"
+                    accept=".svg,image/svg+xml"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleCadUpload(line.uid, file);
+                    }}
+                  />
+                  <CadUploadInline
+                    state={cadByLine[line.uid] ?? { status: "idle" }}
+                    onPick={() => fileInputs.current[line.uid]?.click()}
+                    onApply={() => applyCadDimensions(line.uid)}
+                    onClear={() => clearCadUpload(line.uid)}
+                  />
+                </div>
               </div>
             );
           })}
@@ -601,6 +685,89 @@ function Field({
         {required && <span className="ml-1 text-destructive">*</span>}
       </Label>
       {children}
+    </div>
+  );
+}
+
+function CadUploadInline({
+  state,
+  onPick,
+  onApply,
+  onClear,
+}: {
+  state: CadState;
+  onPick: () => void;
+  onApply: () => void;
+  onClear: () => void;
+}) {
+  if (state.status === "idle") {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={onPick}
+        className="gap-1.5"
+      >
+        <FileUp className="size-3.5" />
+        Upload CAD (SVG)
+      </Button>
+    );
+  }
+
+  if (state.status === "uploading") {
+    return (
+      <div className="flex items-center gap-2 text-xs text-text-secondary">
+        <Loader2 className="size-3.5 animate-spin" />
+        Uploading {state.filename}…
+      </div>
+    );
+  }
+
+  if (state.status === "error") {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-start gap-2 text-xs text-destructive">
+          <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
+          <span>{state.message}</span>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={onPick}>
+          Try a different file
+        </Button>
+      </div>
+    );
+  }
+
+  // success
+  const r = state.result;
+  return (
+    <div className="space-y-2">
+      <div className="flex items-start gap-2 text-xs text-success">
+        <CheckCircle2 className="mt-0.5 size-3.5 shrink-0" />
+        <span>
+          <span className="font-mono text-text">{r.filename}</span> &middot; Extracted{" "}
+          <span className="font-mono text-text">
+            {r.widthInches} &times; {r.heightInches} in
+          </span>
+          {" "}&middot; <span className="font-mono text-text">{r.pathCount}</span> shape
+          {r.pathCount === 1 ? "" : "s"}
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onApply}
+          className="gap-1.5"
+        >
+          <CheckCircle2 className="size-3.5" />
+          Use these dimensions
+        </Button>
+        <Button type="button" variant="ghost" size="sm" onClick={onClear}>
+          Clear
+        </Button>
+      </div>
     </div>
   );
 }
