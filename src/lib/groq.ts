@@ -3,6 +3,112 @@ import { z } from "zod";
 
 const DEFAULT_MODEL = "llama-3.3-70b-versatile";
 
+export type AIErrorCode =
+  | "missing_api_key"
+  | "auth"
+  | "rate_limit"
+  | "timeout"
+  | "network"
+  | "invalid_response"
+  | "service_unavailable"
+  | "validation"
+  | "unknown";
+
+export class AIError extends Error {
+  readonly code: AIErrorCode;
+  readonly status: number;
+  readonly retryable: boolean;
+  readonly userMessage: string;
+  readonly retryAfterSeconds: number | null;
+
+  constructor(opts: {
+    code: AIErrorCode;
+    message: string;
+    userMessage: string;
+    status: number;
+    retryable: boolean;
+    retryAfterSeconds?: number | null;
+  }) {
+    super(opts.message);
+    this.name = "AIError";
+    this.code = opts.code;
+    this.userMessage = opts.userMessage;
+    this.status = opts.status;
+    this.retryable = opts.retryable;
+    this.retryAfterSeconds = opts.retryAfterSeconds ?? null;
+  }
+}
+
+function classifyGroqError(err: unknown): AIError {
+  // Groq SDK throws errors that often have a status property and a message.
+  type GroqLike = {
+    status?: number;
+    message?: string;
+    headers?: { "retry-after"?: string };
+    error?: { type?: string; message?: string };
+  };
+  const e = err as GroqLike;
+  const status = typeof e?.status === "number" ? e.status : 0;
+  const message = e?.message ?? (err instanceof Error ? err.message : String(err));
+  const retryAfter = Number(e?.headers?.["retry-after"] ?? 0) || null;
+
+  if (status === 401 || status === 403 || /unauthorized|invalid api key/i.test(message)) {
+    return new AIError({
+      code: "auth",
+      message,
+      userMessage:
+        "Groq rejected the API key. Verify GROQ_API_KEY in the Vercel project settings and redeploy.",
+      status: 502,
+      retryable: false,
+    });
+  }
+  if (status === 429 || /rate limit|too many requests/i.test(message)) {
+    const wait = retryAfter ? ` Try again in about ${retryAfter}s.` : " Try again in a moment.";
+    return new AIError({
+      code: "rate_limit",
+      message,
+      userMessage: `Groq's free tier rate limit is throttling this request.${wait}`,
+      status: 429,
+      retryable: true,
+      retryAfterSeconds: retryAfter,
+    });
+  }
+  if (status === 503 || status === 502 || /service unavailable|temporarily/i.test(message)) {
+    return new AIError({
+      code: "service_unavailable",
+      message,
+      userMessage: "Groq is having a moment — service unavailable. Please retry shortly.",
+      status: 503,
+      retryable: true,
+    });
+  }
+  if (/timeout|timed out|aborted/i.test(message)) {
+    return new AIError({
+      code: "timeout",
+      message,
+      userMessage: "The request to Groq timed out before a response arrived. Please retry.",
+      status: 504,
+      retryable: true,
+    });
+  }
+  if (/fetch|network|enotfound|econnrefused/i.test(message)) {
+    return new AIError({
+      code: "network",
+      message,
+      userMessage: "Couldn't reach Groq from the server. Check connectivity and retry.",
+      status: 502,
+      retryable: true,
+    });
+  }
+  return new AIError({
+    code: "unknown",
+    message,
+    userMessage: "AI analysis failed unexpectedly. Try again — if it keeps failing, check the server logs.",
+    status: 502,
+    retryable: true,
+  });
+}
+
 const aiAnalysisSchema = z.object({
   complexity_score: z.number().int().min(1).max(10),
   suggested_price_low: z.number().positive(),
@@ -95,11 +201,24 @@ export async function analyzeQuote(
 ): Promise<AnalyzeQuoteResult> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    throw new Error("GROQ_API_KEY is required");
+    throw new AIError({
+      code: "missing_api_key",
+      message: "GROQ_API_KEY env var is not set",
+      userMessage:
+        "Groq isn't configured on the server. Set GROQ_API_KEY in the Vercel project settings and redeploy.",
+      status: 503,
+      retryable: false,
+    });
   }
 
   if (!input.lines || input.lines.length === 0) {
-    throw new Error("analyzeQuote requires at least one line");
+    throw new AIError({
+      code: "validation",
+      message: "analyzeQuote requires at least one line",
+      userMessage: "This quote has no line items, so there's nothing to analyze.",
+      status: 422,
+      retryable: false,
+    });
   }
 
   const model = options?.model ?? DEFAULT_MODEL;
@@ -109,41 +228,70 @@ export async function analyzeQuote(
   const groq = new Groq({ apiKey });
   const startedAt = Date.now();
 
-  const completion = await groq.chat.completions.create({
-    model,
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: userPrompt },
-    ],
-    response_format: { type: "json_object" },
-    temperature: 0.2,
-    max_tokens: 600,
-  });
+  let completion;
+  try {
+    completion = await groq.chat.completions.create({
+      model,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.2,
+      max_tokens: 600,
+    });
+  } catch (err) {
+    throw classifyGroqError(err);
+  }
 
   const latencyMs = Date.now() - startedAt;
   const raw = completion.choices[0]?.message?.content;
   if (!raw) {
-    throw new Error("Groq returned an empty response");
+    throw new AIError({
+      code: "invalid_response",
+      message: "Groq returned an empty response",
+      userMessage:
+        "The model returned an empty response. This is rare — please retry.",
+      status: 502,
+      retryable: true,
+    });
   }
 
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new Error(`Groq response was not valid JSON: ${raw.slice(0, 200)}`);
+    throw new AIError({
+      code: "invalid_response",
+      message: `Groq response was not valid JSON: ${raw.slice(0, 200)}`,
+      userMessage:
+        "The model returned malformed JSON. Retry, or switch to a smaller model if this keeps happening.",
+      status: 502,
+      retryable: true,
+    });
   }
 
   const result = aiAnalysisSchema.safeParse(parsed);
   if (!result.success) {
-    throw new Error(
-      `Groq response failed schema validation: ${result.error.message}`,
-    );
+    throw new AIError({
+      code: "invalid_response",
+      message: `Groq response failed schema validation: ${result.error.message}`,
+      userMessage:
+        "The model's response didn't match the expected shape. Retry — usually a one-off.",
+      status: 502,
+      retryable: true,
+    });
   }
 
   if (result.data.suggested_price_low > result.data.suggested_price_high) {
-    throw new Error(
-      `Groq returned suggested_price_low > suggested_price_high (${result.data.suggested_price_low} > ${result.data.suggested_price_high})`,
-    );
+    throw new AIError({
+      code: "invalid_response",
+      message: `Groq returned suggested_price_low > suggested_price_high (${result.data.suggested_price_low} > ${result.data.suggested_price_high})`,
+      userMessage:
+        "The model returned an inverted price range. Retry — usually a one-off.",
+      status: 502,
+      retryable: true,
+    });
   }
 
   return {
