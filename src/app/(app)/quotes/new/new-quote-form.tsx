@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useMemo, useState, useTransition, type FormEvent } from "react";
-import { AlertCircle, Plus, Trash2, UserPlus } from "lucide-react";
+import { AlertCircle, Plus, Sparkles, Trash2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SearchableSelect } from "@/components/searchable-select";
 import { calculateBaseEstimate } from "@/lib/estimator";
+import { generateQuoteSeed } from "@/lib/demo-fill";
 import { createQuoteAction } from "./actions";
 
 type ProductRow = {
@@ -134,6 +135,29 @@ export function NewQuoteForm({ products, materials, industries, customers }: Pro
     );
   }
 
+  function autofill() {
+    const seed = generateQuoteSeed({ products, materials, industries });
+    if (!seed) return;
+    // Clear any saved-customer selection — the autofilled name/email come from
+    // the persona, not from a row in the customers table.
+    clearCustomerSelection();
+    setCustomerName(seed.customer.name);
+    setCustomerEmail(seed.customer.email);
+    if (seed.industryId) setIndustryId(seed.industryId);
+    setNotes(seed.notes);
+    setLines(
+      seed.lines.map((l) => ({
+        uid: crypto.randomUUID(),
+        productId: l.productId,
+        materialId: l.materialId,
+        widthInches: l.widthInches,
+        heightInches: l.heightInches,
+        quantity: l.quantity,
+      })),
+    );
+    setError(null);
+  }
+
   const groupedProducts = useMemo(() => {
     const groups = new Map<string, ProductRow[]>();
     for (const p of products) {
@@ -242,6 +266,19 @@ export function NewQuoteForm({ products, materials, industries, customers }: Pro
 
   return (
     <form onSubmit={onSubmit} className="space-y-10">
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={autofill}
+          className="gap-1.5"
+        >
+          <Sparkles className="size-3.5" />
+          Autofill demo data
+        </Button>
+      </div>
+
       <Section title="Customer">
         {customers.length > 0 && (
           <Field id="customer-picker" label="Pick a saved customer (optional)">
