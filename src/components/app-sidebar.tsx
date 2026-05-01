@@ -43,11 +43,10 @@ const PRIMARY_NAV: NavItem[] = [
   { href: "/quotes", label: "Quotes", icon: ListChecks },
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/reports", label: "Reports", icon: LineChart },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-const SECONDARY_NAV: NavItem[] = [
-  { href: "/settings", label: "Settings", icon: Settings, comingSoon: true },
-];
+const SECONDARY_NAV: NavItem[] = [];
 
 function isActive(href: string, pathname: string, exact: boolean | undefined) {
   if (exact) return pathname === href;
@@ -102,33 +101,36 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Coming next</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {SECONDARY_NAV.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      tooltip={`${item.label} — coming next`}
-                      disabled
-                      className="cursor-not-allowed opacity-60"
-                    >
-                      <Icon />
-                      <span>{item.label}</span>
-                      <span className="ml-auto rounded bg-surface-3 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.14em] text-text-muted group-data-[collapsible=icon]:hidden">
-                        Soon
-                      </span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {SECONDARY_NAV.length > 0 && (
+          <>
+            <SidebarSeparator />
+            <SidebarGroup>
+              <SidebarGroupLabel>Coming next</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {SECONDARY_NAV.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton
+                          tooltip={`${item.label} — coming next`}
+                          disabled
+                          className="cursor-not-allowed opacity-60"
+                        >
+                          <Icon />
+                          <span>{item.label}</span>
+                          <span className="ml-auto rounded bg-surface-3 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.14em] text-text-muted group-data-[collapsible=icon]:hidden">
+                            Soon
+                          </span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
       </SidebarContent>
 
       <SidebarFooter>
