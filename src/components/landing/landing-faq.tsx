@@ -40,6 +40,10 @@ const FAQ_ITEMS: { q: string; a: string }[] = [
     q: "How do I get started?",
     a: "Click \"Sign in as demo\" on the sign-in page — a pre-seeded estimator account with realistic data lands you in the app instantly, no registration. When you're ready for your own data, create an account and the catalog seeds with the standard Marking Systems product list. From first sign-in to first AI-scored quote: under 90 seconds.",
   },
+  {
+    q: "What happens to data I enter via the demo account?",
+    a: "Anything you create through the shared demo account from May 2nd, 2026 onwards is automatically swept after 48 hours by a daily cleanup job. The 11 curated sample quotes are tagged is_demo_sample=true and stay forever so the walkthrough is always populated. The same 48-hour window kicks in if the database grows beyond ~100 MB. Want persistent data? Create your own account — your workspace is isolated and never touched by the demo cleanup.",
+  },
 ];
 
 export function LandingFaq() {

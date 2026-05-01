@@ -184,6 +184,7 @@ export type Database = {
           email: string | null
           estimator_id: string
           id: string
+          is_demo_sample: boolean
           name: string
           notes: string | null
           phone: string | null
@@ -195,6 +196,7 @@ export type Database = {
           email?: string | null
           estimator_id: string
           id?: string
+          is_demo_sample?: boolean
           name: string
           notes?: string | null
           phone?: string | null
@@ -206,6 +208,7 @@ export type Database = {
           email?: string | null
           estimator_id?: string
           id?: string
+          is_demo_sample?: boolean
           name?: string
           notes?: string | null
           phone?: string | null
