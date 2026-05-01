@@ -16,6 +16,7 @@ import {
   type QuoteStatus,
 } from "@/lib/quote-helpers";
 import { KpiValueAnimated, type KpiFormat } from "@/components/kpi-value-animated";
+import { DemoExpiryBadge } from "@/components/demo-expiry-badge";
 import { QuotesFilterBar } from "./quotes-filter-bar";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -41,7 +42,7 @@ export default async function QuotesPipelinePage({
     .select(
       `id, customer_name, customer_email, status, base_estimate, final_price,
        width_inches, height_inches, quantity, ai_complexity_score,
-       ai_suggested_price_low, ai_suggested_price_high, created_at,
+       ai_suggested_price_low, ai_suggested_price_high, created_at, is_demo_sample,
        product:products(name, category),
        industry:industries(name)`,
     )
@@ -142,9 +143,15 @@ export default async function QuotesPipelinePage({
                         >
                           {q.customer_name}
                         </Link>
-                        {industry?.name && (
-                          <span className="text-xs text-text-muted">{industry.name}</span>
-                        )}
+                        <div className="mt-0.5 flex items-center gap-1.5">
+                          {industry?.name && (
+                            <span className="text-xs text-text-muted">{industry.name}</span>
+                          )}
+                          <DemoExpiryBadge
+                            createdAt={q.created_at}
+                            isSample={q.is_demo_sample}
+                          />
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-text">{product?.name ?? "—"}</span>

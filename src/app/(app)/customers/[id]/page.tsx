@@ -14,6 +14,7 @@ import { auth } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { buttonVariants } from "@/components/ui/button";
 import { QuoteStatusBadge } from "@/components/quote-status-badge";
+import { DemoExpiryBadge } from "@/components/demo-expiry-badge";
 import { currencyDetailed as currency } from "@/lib/quote-helpers";
 import { cn } from "@/lib/utils";
 
@@ -37,7 +38,9 @@ export default async function CustomerDetailPage({
   const [customerRes, quotesRes] = await Promise.all([
     supabase
       .from("customers")
-      .select("id, name, email, company, phone, notes, created_at, estimator_id")
+      .select(
+        "id, name, email, company, phone, notes, created_at, estimator_id, is_demo_sample",
+      )
       .eq("id", id)
       .maybeSingle(),
     supabase
@@ -93,7 +96,7 @@ export default async function CustomerDetailPage({
             <p className="text-sm text-text-secondary">{customer.company}</p>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col items-end gap-2">
           <Link
             href="/quotes/new"
             className={cn(
@@ -104,6 +107,11 @@ export default async function CustomerDetailPage({
             <FilePlus2 className="size-4" />
             Quote this customer
           </Link>
+          <DemoExpiryBadge
+            createdAt={customer.created_at}
+            isSample={customer.is_demo_sample}
+            size="md"
+          />
         </div>
       </header>
 

@@ -12,6 +12,7 @@ import {
   deltasVsBenchmark,
 } from "@/lib/cost-breakdown";
 import { brevoIsConfigured } from "@/lib/brevo";
+import { DemoExpiryBadge } from "@/components/demo-expiry-badge";
 import { AIPanel, type AIAnalysisResult } from "./ai-panel";
 import { QuoteActions } from "./quote-actions";
 import { EmailQuoteButton } from "./email-quote-button";
@@ -30,7 +31,7 @@ export default async function QuoteDetailPage({
       .select(
         `
         id, customer_name, customer_email, status, base_estimate,
-        certifications, notes,
+        certifications, notes, is_demo_sample,
         ai_complexity_score, ai_suggested_price_low, ai_suggested_price_high, ai_rationale,
         created_at, updated_at,
         industries ( name, certification_premium, required_certifications )
@@ -150,7 +151,14 @@ export default async function QuoteDetailPage({
             <p className="text-sm text-text-secondary">{quote.customer_email}</p>
           )}
         </div>
-        <QuoteStatusBadge status={quote.status} />
+        <div className="flex flex-col items-start gap-2 sm:items-end">
+          <QuoteStatusBadge status={quote.status} />
+          <DemoExpiryBadge
+            createdAt={quote.created_at}
+            isSample={quote.is_demo_sample}
+            size="md"
+          />
+        </div>
       </header>
 
       <section className="rounded-lg border border-border bg-card p-6">

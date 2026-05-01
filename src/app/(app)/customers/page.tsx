@@ -4,6 +4,7 @@ import { Building2, Mail, Phone, UserPlus, Users } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { buttonVariants } from "@/components/ui/button";
+import { DemoExpiryBadge } from "@/components/demo-expiry-badge";
 import { cn } from "@/lib/utils";
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -21,7 +22,7 @@ export default async function CustomersPage() {
   const [customersRes, quoteCountsRes] = await Promise.all([
     supabase
       .from("customers")
-      .select("id, name, email, company, phone, created_at")
+      .select("id, name, email, company, phone, created_at, is_demo_sample")
       .eq("estimator_id", session.user.id)
       .order("name", { ascending: true }),
     supabase
@@ -93,9 +94,15 @@ export default async function CustomersPage() {
                         </p>
                       )}
                     </div>
-                    <span className="rounded bg-surface-3 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-text-muted">
-                      {quoteCounts[c.id] ?? 0} quotes
-                    </span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="rounded bg-surface-3 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-text-muted">
+                        {quoteCounts[c.id] ?? 0} quotes
+                      </span>
+                      <DemoExpiryBadge
+                        createdAt={c.created_at}
+                        isSample={c.is_demo_sample}
+                      />
+                    </div>
                   </div>
 
                   <dl className="mt-4 space-y-1.5 text-xs text-text-secondary">
