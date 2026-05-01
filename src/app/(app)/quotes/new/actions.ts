@@ -7,18 +7,22 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { calculateBaseEstimate } from "@/lib/estimator";
 import { moderateQuoteInputs } from "@/lib/moderation";
 
+export type LineInput = {
+  productId: string;
+  materialId: string;
+  widthInches: number;
+  heightInches: number;
+  quantity: number;
+};
+
 export type CreateQuoteInput = {
   customerId: string | null;
   customerName: string;
   customerEmail: string | null;
-  productId: string;
-  materialId: string;
   industryId: string;
-  widthInches: number;
-  heightInches: number;
-  quantity: number;
   certifications: string[];
   notes: string | null;
+  lines: LineInput[];
 };
 
 export type CreateQuoteResult =
@@ -36,17 +40,27 @@ export async function createQuoteAction(
   if (!input.customerName.trim()) {
     return { ok: false, error: "Customer name is required." };
   }
-  if (!input.productId || !input.materialId || !input.industryId) {
-    return { ok: false, error: "Product, material and industry are required." };
+  if (!input.industryId) {
+    return { ok: false, error: "Industry is required." };
   }
-  if (!Number.isFinite(input.widthInches) || input.widthInches <= 0) {
-    return { ok: false, error: "Width must be a positive number." };
+  if (!input.lines || input.lines.length === 0) {
+    return { ok: false, error: "Add at least one line item." };
   }
-  if (!Number.isFinite(input.heightInches) || input.heightInches <= 0) {
-    return { ok: false, error: "Height must be a positive number." };
-  }
-  if (!Number.isInteger(input.quantity) || input.quantity <= 0) {
-    return { ok: false, error: "Quantity must be a positive whole number." };
+
+  for (const [i, line] of input.lines.entries()) {
+    const where = `Line ${i + 1}`;
+    if (!line.productId || !line.materialId) {
+      return { ok: false, error: `${where}: product and material are required.` };
+    }
+    if (!Number.isFinite(line.widthInches) || line.widthInches <= 0) {
+      return { ok: false, error: `${where}: width must be a positive number.` };
+    }
+    if (!Number.isFinite(line.heightInches) || line.heightInches <= 0) {
+      return { ok: false, error: `${where}: height must be a positive number.` };
+    }
+    if (!Number.isInteger(line.quantity) || line.quantity <= 0) {
+      return { ok: false, error: `${where}: quantity must be a positive whole number.` };
+    }
   }
 
   const moderation = moderateQuoteInputs({
@@ -60,13 +74,13 @@ export async function createQuoteAction(
 
   const supabase = createServerSupabaseClient();
 
-  const [{ data: product, error: productError }, { data: industry, error: industryError }] =
+  const productIds = Array.from(new Set(input.lines.map((l) => l.productId)));
+  const [{ data: products, error: productsError }, { data: industry, error: industryError }] =
     await Promise.all([
       supabase
         .from("products")
-        .select("base_price_per_sq_in, setup_fee, min_qty")
-        .eq("id", input.productId)
-        .single(),
+        .select("id, base_price_per_sq_in, setup_fee, min_qty")
+        .in("id", productIds),
       supabase
         .from("industries")
         .select("certification_premium")
@@ -74,27 +88,40 @@ export async function createQuoteAction(
         .single(),
     ]);
 
-  if (productError || !product) {
-    return { ok: false, error: "Selected product not found." };
+  if (productsError || !products) {
+    return { ok: false, error: "Failed to load product details." };
   }
   if (industryError || !industry) {
     return { ok: false, error: "Selected industry not found." };
   }
-  if (input.quantity < product.min_qty) {
-    return {
-      ok: false,
-      error: `Quantity must be at least ${product.min_qty} for this product.`,
-    };
+
+  const productById = new Map(products.map((p) => [p.id, p]));
+  const certificationPremium = Number(industry.certification_premium);
+
+  const lineEstimates: number[] = [];
+  for (const [i, line] of input.lines.entries()) {
+    const product = productById.get(line.productId);
+    if (!product) {
+      return { ok: false, error: `Line ${i + 1}: selected product not found.` };
+    }
+    if (line.quantity < product.min_qty) {
+      return {
+        ok: false,
+        error: `Line ${i + 1}: quantity must be at least ${product.min_qty} for this product.`,
+      };
+    }
+    const lineEstimate = calculateBaseEstimate({
+      basePricePerSqIn: Number(product.base_price_per_sq_in),
+      setupFee: Number(product.setup_fee),
+      widthInches: line.widthInches,
+      heightInches: line.heightInches,
+      quantity: line.quantity,
+      certificationPremium,
+    });
+    lineEstimates.push(lineEstimate);
   }
 
-  const baseEstimate = calculateBaseEstimate({
-    basePricePerSqIn: Number(product.base_price_per_sq_in),
-    setupFee: Number(product.setup_fee),
-    widthInches: input.widthInches,
-    heightInches: input.heightInches,
-    quantity: input.quantity,
-    certificationPremium: Number(industry.certification_premium),
-  });
+  const baseEstimate = lineEstimates.reduce((sum, e) => sum + e, 0);
 
   let customerId: string | null = null;
   if (input.customerId) {
@@ -112,18 +139,22 @@ export async function createQuoteAction(
     customerId = customer.id;
   }
 
+  // Insert the parent quote first. Inline product/material/dimensions/quantity
+  // columns are populated from the FIRST line for backwards compat — they'll
+  // be dropped in a follow-up migration once nothing reads them.
+  const firstLine = input.lines[0];
   const { data: inserted, error: insertError } = await supabase
     .from("quotes")
     .insert({
       customer_id: customerId,
       customer_name: input.customerName.trim(),
       customer_email: input.customerEmail?.trim() || null,
-      product_id: input.productId,
-      material_id: input.materialId,
+      product_id: firstLine.productId,
+      material_id: firstLine.materialId,
       industry_id: input.industryId,
-      width_inches: input.widthInches,
-      height_inches: input.heightInches,
-      quantity: input.quantity,
+      width_inches: firstLine.widthInches,
+      height_inches: firstLine.heightInches,
+      quantity: firstLine.quantity,
       certifications: input.certifications,
       notes: input.notes?.trim() || null,
       status: "draft",
@@ -135,6 +166,25 @@ export async function createQuoteAction(
 
   if (insertError || !inserted) {
     return { ok: false, error: insertError?.message ?? "Failed to create quote." };
+  }
+
+  // Bulk-insert lines. If this fails we delete the parent so we don't leave a
+  // headless quote with zero lines (which would 500 the detail page).
+  const lineRows = input.lines.map((line, i) => ({
+    quote_id: inserted.id,
+    position: i,
+    product_id: line.productId,
+    material_id: line.materialId,
+    width_inches: line.widthInches,
+    height_inches: line.heightInches,
+    quantity: line.quantity,
+    line_estimate: lineEstimates[i],
+  }));
+
+  const { error: linesError } = await supabase.from("quote_lines").insert(lineRows);
+  if (linesError) {
+    await supabase.from("quotes").delete().eq("id", inserted.id);
+    return { ok: false, error: `Failed to save line items: ${linesError.message}` };
   }
 
   redirect(`/quotes/${inserted.id}`);
