@@ -118,7 +118,7 @@ function HeroSection() {
             Portfolio case study · Custom manufacturing
           </p>
           <h1 className="mt-6 font-heading text-4xl font-semibold leading-[1.05] tracking-tight text-text sm:text-5xl md:text-6xl">
-            AI-enhanced quoting,
+            AI-enhanced quoting,{" "}
             <br className="hidden sm:block" />
             <span className="text-accent">priced by the numbers, not by hunch.</span>
           </h1>
