@@ -170,7 +170,6 @@ pnpm exec tsx --env-file=.env.local scripts/seed-demo-quotes.ts
 ## Project structure
 
 ```
-.ai/docs/                ← project brief, brand decision, Loom script (committed reference)
 docs/                    ← SCREENSHOTS guide + screenshots/
 supabase/migrations/     ← 0001…0009 schema + storage bucket + indexes
 src/
