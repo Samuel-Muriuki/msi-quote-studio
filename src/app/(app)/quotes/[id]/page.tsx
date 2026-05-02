@@ -13,6 +13,7 @@ import {
 } from "@/lib/cost-breakdown";
 import { brevoIsConfigured } from "@/lib/brevo";
 import { DemoExpiryBadge } from "@/components/demo-expiry-badge";
+import { BackToTop } from "@/components/back-to-top";
 import { AIPanel, type AIAnalysisResult } from "./ai-panel";
 import { QuoteActions } from "./quote-actions";
 import { EmailQuoteButton } from "./email-quote-button";
@@ -320,6 +321,7 @@ export default async function QuoteDetailPage({
           <QuoteActions quoteId={String(quote.id)} status={quote.status} />
         </div>
       </section>
+      <BackToTop />
     </div>
   );
 }

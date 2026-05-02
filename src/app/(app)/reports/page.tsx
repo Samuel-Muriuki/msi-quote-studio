@@ -5,6 +5,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { currency } from "@/lib/quote-helpers";
 import { QuoteStatusBadge } from "@/components/quote-status-badge";
 import { KpiValueAnimated, type KpiFormat } from "@/components/kpi-value-animated";
+import { BackToTop } from "@/components/back-to-top";
 import { cn } from "@/lib/utils";
 import {
   CategoryBarChart,
@@ -223,6 +224,7 @@ export default async function ReportsPage() {
           </div>
         )}
       </section>
+      <BackToTop />
     </div>
   );
 }
