@@ -48,3 +48,6 @@ next-env.d.ts
 coverage/
 playwright-report/
 test-results/
+
+# Screenshot capture auth state — local-only credential blob
+scripts/.playwright-auth.json
