@@ -16,6 +16,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { buttonVariants } from "@/components/ui/button";
 import { QuoteStatusBadge } from "@/components/quote-status-badge";
 import { DemoExpiryBadge } from "@/components/demo-expiry-badge";
+import { BackToTop } from "@/components/back-to-top";
 import { currencyDetailed as currency } from "@/lib/quote-helpers";
 import { cn } from "@/lib/utils";
 
@@ -243,6 +244,7 @@ export default async function CustomerDetailPage({
           )}
         </div>
       </section>
+      <BackToTop />
     </div>
   );
 }
