@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { LandingFaq } from "@/components/landing/landing-faq";
 import { BenchmarkTeaser } from "@/components/landing/benchmark-teaser";
 import { FreeCalculator } from "@/components/landing/free-calculator";
+import { BackToTop } from "@/components/back-to-top";
 
 const REPO_URL = "https://github.com/Samuel-Muriuki/msi-quote-studio";
 
@@ -42,6 +43,7 @@ export default function HomePage() {
       </main>
 
       <SiteFooter />
+      <BackToTop />
     </div>
   );
 }
