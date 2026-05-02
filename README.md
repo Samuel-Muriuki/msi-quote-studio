@@ -199,4 +199,4 @@ This is an independent portfolio project, inspired by Marking Systems Inc.'s pub
 
 ## Author
 
-**Samuel Muriuki** — [sammkimberly@gmail.com](mailto:sammkimberly@gmail.com) — [portfolio](https://samuel-muriuki.vercel.app/)
+**Samuel Muriuki** — [github.com.imminent621@passinbox.com](mailto:github.com.imminent621@passinbox.com) — [portfolio](https://samuel-muriuki.vercel.app/)
