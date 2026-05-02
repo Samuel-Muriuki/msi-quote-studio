@@ -23,6 +23,9 @@ dist/
 # Claude Code working folder — never commit
 .claude/
 
+# Local AI/planning workspace — project briefs, brand decisions, Loom scripts
+.ai/
+
 # Vercel build output
 .vercel/
 
